@@ -1,0 +1,127 @@
+{
+  "entities": {
+    "Member": {
+      "title": "Member",
+      "description": "A sports gym membership profile.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "status": { "type": "string", "enum": ["Active", "Paused", "Expired"] },
+        "plan": { "type": "string" },
+        "joinDate": { "type": "string" },
+        "expiryDate": { "type": "string" },
+        "photoUrl": { "type": "string" },
+        "notes": { "type": "string" },
+        "totalCheckIns": { "type": "number" },
+        "lastCheckIn": { "type": "string" },
+        "reminderSentDate": { "type": "string" }
+      },
+      "required": ["id", "name", "email", "phone", "status", "plan", "joinDate", "expiryDate", "totalCheckIns"]
+    },
+    "MembershipPlan": {
+      "title": "MembershipPlan",
+      "description": "Available gym subscription plan structures.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "price": { "type": "number" },
+        "durationDays": { "type": "number" },
+        "features": { "type": "array" }
+      },
+      "required": ["name", "price", "durationDays", "features"]
+    },
+    "CheckIn": {
+      "title": "CheckIn",
+      "description": "A validation entry log generated on entrance.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "memberId": { "type": "string" },
+        "memberName": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "planType": { "type": "string" },
+        "method": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "memberId", "memberName", "timestamp", "planType", "method", "status"]
+    },
+    "WelcomeMessage": {
+      "title": "WelcomeMessage",
+      "description": "A generated welcome or attendance entry message queued for the member.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["Welcome", "CheckIn"] },
+        "memberId": { "type": "string" },
+        "memberName": { "type": "string" },
+        "phone": { "type": "string" },
+        "messageText": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "status": { "type": "string", "enum": ["Pending", "Sent"] },
+        "method": { "type": "string" },
+        "status": { "type": "string", "enum": ["Pending", "Sent"] },
+        "method": { "type": "string" },
+        "plan": { "type": "string" }
+      },
+      "required": ["id", "type", "memberId", "memberName", "phone", "messageText", "timestamp", "status"]
+    },
+    "SecurityConfig": {
+      "title": "SecurityConfig",
+      "description": "Customizable secure credentials for Owner and Admin",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "ownerEmail": { "type": "string" },
+        "ownerPassword": { "type": "string" },
+        "adminEmail": { "type": "string" },
+        "adminPassword": { "type": "string" }
+      },
+      "required": ["id", "ownerEmail", "ownerPassword", "adminEmail", "adminPassword"]
+    },
+    "Feedback": {
+      "title": "Feedback",
+      "description": "Gym feedback and suggestions submitted by members",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "memberName": { "type": "string" },
+        "memberEmail": { "type": "string" },
+        "rating": { "type": "number" },
+        "category": { "type": "string" },
+        "suggestion": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "status": { "type": "string", "enum": ["Pending", "Reviewed", "Addressed"] }
+      },
+      "required": ["id", "rating", "category", "suggestion", "timestamp", "status"]
+    }
+  },
+  "firestore": {
+    "/members/{memberId}": {
+      "schema": "Member",
+      "description": "Collection of all members registered in Apex Fitness"
+    },
+    "/membership_plans/{planId}": {
+      "schema": "MembershipPlan",
+      "description": "Gym membership subscription structural plans configuration"
+    },
+    "/checkins/{checkinId}": {
+      "schema": "CheckIn",
+      "description": "Log of gym entrance checkins"
+    },
+    "/welcome_messages/{messageId}": {
+      "schema": "WelcomeMessage",
+      "description": "Log of real-time synchronized member welcome and check-in greeting notifications"
+    },
+    "/settings/{settingsId}": {
+      "schema": "SecurityConfig",
+      "description": "Global custom configurations and security settings"
+    },
+    "/feedbacks/{feedbackId}": {
+      "schema": "Feedback",
+      "description": "Feedback and suggestions logged by gym members"
+    }
+  }
+}

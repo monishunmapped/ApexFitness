@@ -1,0 +1,6 @@
+{
+  "name": "Apex Fitness",
+  "description": "A high-fidelity gym management platform for Apex Fitness owners to manage memberships, track daily check-in statistics, and allow users to check in via QR code.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

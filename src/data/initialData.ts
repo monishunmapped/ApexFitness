@@ -1,0 +1,188 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { Member, CheckIn, MembershipPlan } from '../types';
+
+export const MEMBERSHIP_PLANS: MembershipPlan[] = [
+  {
+    name: 'Day Pass',
+    price: 15,
+    durationDays: 1,
+    features: ['Single-day gym access', 'Full cardio & weight zone', 'Locker & shower facilities'],
+  },
+  {
+    name: 'Monthly Core',
+    price: 59,
+    durationDays: 30,
+    features: ['Unlimited monthly access', 'All strength & cardio zones', '1 Free fitness assessment', 'Group fitness classes'],
+  },
+  {
+    name: 'Annual VIP',
+    price: 499,
+    durationDays: 365,
+    features: ['Unlimited 1-year access', 'All group fitness classes', '4 Free physical trainer sessions', 'Premium lounge access', '10% Pro-shop discount'],
+  },
+  {
+    name: 'Premium Executive',
+    price: 999,
+    durationDays: 365,
+    features: ['Unlimited 24/7 VIP access', 'Dedicated private trainer', 'Free laundry service', 'Protein shake at juice-bar daily', 'Guest pass availability'],
+  },
+];
+
+export const INITIAL_MEMBERS: Member[] = [
+  {
+    id: '20061988',
+    name: 'Alexander Sterling',
+    email: 'alexander.s@gmail.com',
+    phone: '+1 (555) 0192-384',
+    status: 'Active',
+    plan: 'Annual VIP',
+    joinDate: '2026-01-15',
+    expiryDate: '2027-01-15',
+    dob: '1988-06-20',
+    totalCheckIns: 48,
+    lastCheckIn: '2026-06-20T08:15:00Z',
+    gender: 'Male',
+    shiftTiming: 'Morning',
+    notes: 'Pre-existing knee injury. DOB: 20/06/1988 (Gate PIN: 200688).',
+    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    photoUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+  },
+  {
+    id: '22061995',
+    name: 'Clara Oswald',
+    email: 'clara.os@gmail.com',
+    phone: '+1 (555) 0128-491',
+    status: 'Active',
+    plan: 'Monthly Core',
+    joinDate: '2026-05-25',
+    expiryDate: '2026-06-24',
+    dob: '1995-06-22',
+    totalCheckIns: 12,
+    lastCheckIn: '2026-06-19T17:30:00Z',
+    gender: 'Female',
+    shiftTiming: 'Evening',
+    notes: 'Attends Tuesday spinning sessions. DOB: 22/06/1995 (Gate PIN: 220695).',
+    avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
+    photoUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
+  },
+  {
+    id: '10111954',
+    name: 'Marcus Brody',
+    email: 'mbrody@museum.org',
+    phone: '+1 (555) 0147-219',
+    status: 'Expired',
+    plan: 'Day Pass',
+    joinDate: '2026-06-10',
+    expiryDate: '2026-06-11',
+    dob: '1954-11-10',
+    totalCheckIns: 1,
+    lastCheckIn: '2026-06-10T14:22:00Z',
+    gender: 'Male',
+    notes: 'Trial workout. DOB: 10/11/1954 (Gate PIN: 101154).',
+    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    photoUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+  },
+  {
+    id: '25061990',
+    name: 'Elena Rostova',
+    email: 'elena.rost@outlook.com',
+    phone: '+1 (555) 0134-885',
+    status: 'Active',
+    plan: 'Premium Executive',
+    joinDate: '2026-03-01',
+    expiryDate: '2027-03-01',
+    dob: '1990-06-25',
+    totalCheckIns: 32,
+    lastCheckIn: '2026-06-20T10:05:00Z',
+    gender: 'Female',
+    notes: 'Executive lock-box assigned #22. DOB: 25/06/1990 (Gate PIN: 250690).',
+    avatarUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
+    photoUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
+  },
+  {
+    id: '10021965',
+    name: 'Sarah Connor',
+    email: 'sconnor@skynet.net',
+    phone: '+1 (555) 0199-001',
+    status: 'Paused',
+    plan: 'Annual VIP',
+    joinDate: '2026-02-10',
+    expiryDate: '2027-02-10',
+    dob: '1965-02-10',
+    totalCheckIns: 24,
+    lastCheckIn: '2026-05-18T06:12:00Z',
+    gender: 'Female',
+    notes: 'Membership paused due to travel. DOB: 10/02/1965 (Gate PIN: 100265).',
+    avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
+    photoUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
+  },
+  {
+    id: '23061993',
+    name: 'James Hudson',
+    email: 'jhud@gmail.com',
+    phone: '+1 (555) 0111-222',
+    status: 'Active',
+    plan: 'Monthly Core',
+    joinDate: '2026-06-01',
+    expiryDate: '2026-06-25',
+    dob: '1993-06-23',
+    totalCheckIns: 8,
+    lastCheckIn: '2026-06-20T09:40:00Z',
+    gender: 'Male',
+    notes: 'Powerlifting enthusiast. DOB: 23/06/1993 (Gate PIN: 230693).',
+    avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
+    photoUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
+  }
+];
+
+export const INITIAL_CHECKINS: CheckIn[] = [
+  {
+    id: 'CI-2001',
+    memberId: '20061988',
+    memberName: 'Alexander Sterling',
+    timestamp: '2026-06-20T08:15:00Z',
+    planType: 'Annual VIP',
+    method: 'Self QR Scan',
+    status: 'Granted'
+  },
+  {
+    id: 'CI-2002',
+    memberId: '23061993',
+    memberName: 'James Hudson',
+    timestamp: '2026-06-20T09:40:00Z',
+    planType: 'Monthly Core',
+    method: 'Front Desk Scan',
+    status: 'Granted'
+  },
+  {
+    id: 'CI-2003',
+    memberId: '25061990',
+    memberName: 'Elena Rostova',
+    timestamp: '2026-06-20T10:05:00Z',
+    planType: 'Premium Executive',
+    method: 'Self QR Scan',
+    status: 'Granted'
+  },
+  {
+    id: 'CI-1998',
+    memberId: '22061995',
+    memberName: 'Clara Oswald',
+    timestamp: '2026-06-19T17:30:00Z',
+    planType: 'Monthly Core',
+    method: 'Self QR Scan',
+    status: 'Granted'
+  },
+  {
+    id: 'CI-1997',
+    memberId: '20061988',
+    memberName: 'Alexander Sterling',
+    timestamp: '2026-06-19T07:10:00Z',
+    planType: 'Annual VIP',
+    method: 'Manual Select',
+    status: 'Granted'
+  }
+];
