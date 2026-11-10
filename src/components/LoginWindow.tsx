@@ -9,20 +9,15 @@ import {
   Mail, 
   Eye, 
   EyeOff, 
-  UserCheck, 
   ShieldAlert, 
-  Key, 
-  Sparkles, 
   Smartphone, 
-  ArrowRight,
-  Shield
+  ArrowRight
 } from 'lucide-react';
 import { ApexLogo } from './ApexLogo';
-import { SecurityConfig } from '../types';
-import { signInWithEmail } from '../lib/firebase';
+import { SecurityConfig, UserSession } from '../types';
 
 interface LoginWindowProps {
-  onLoginSuccess: (session: { email: string; role: 'Owner' | 'Admin' }) => void;
+  onLoginSuccess: (session: UserSession) => void;
   onBypassToPortal: () => void;
   securityConfig: SecurityConfig;
 }
@@ -32,64 +27,17 @@ export function LoginWindow({ onLoginSuccess, onBypassToPortal, securityConfig }
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
 
-  // Dynamic secure login credentials
-  const CREDENTIALS = {
-    owner: {
-      email: securityConfig.ownerEmail || 'owner@apex.com',
-      password: securityConfig.ownerPassword || 'apexowner2026',
-      role: 'Owner' as const
-    },
-    admin: {
-      email: securityConfig.adminEmail || 'admin@apex.com',
-      password: securityConfig.adminPassword || 'apexadmin2026',
-      role: 'Admin' as const
-    }
-  };
-
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setLoading(true);
-
     const trimmedEmail = email.trim().toLowerCase();
-
-    try {
-      // First attempt authenticating using actual Firebase Auth to securely identify the user
-      try {
-        await signInWithEmail(trimmedEmail, password);
-      } catch (authErr: any) {
-        console.log("[FirebaseAuth] Direct Firebase email authentication notice (proceeding with local security credentials check):", authErr?.message || authErr);
-      }
-
-      // Check if credentials match local configuration settings
-      if (trimmedEmail === CREDENTIALS.owner.email && password === CREDENTIALS.owner.password) {
-        onLoginSuccess({ email: CREDENTIALS.owner.email, role: 'Owner' });
-      } else if (trimmedEmail === CREDENTIALS.admin.email && password === CREDENTIALS.admin.password) {
-        onLoginSuccess({ email: CREDENTIALS.admin.email, role: 'Admin' });
-      } else {
-        // Fallback: If it was validated by Firebase Auth, we log them in as an Admin securely
-        setError('Invalid identifier or security credentials. Please use the preconfigured profiles below.');
-      }
-    } catch (err: any) {
-      setError(err.message || 'An error occurred during verification.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-
-
-  const fillCredentials = (type: 'owner' | 'admin') => {
-    setError(null);
-    if (type === 'owner') {
-      setEmail(CREDENTIALS.owner.email);
-      setPassword(CREDENTIALS.owner.password);
-    } else {
-      setEmail(CREDENTIALS.admin.email);
-      setPassword(CREDENTIALS.admin.password);
-    }
+    const accounts = [
+      { email: securityConfig.ownerEmail, password: securityConfig.ownerPassword, role: 'Owner' as const },
+      { email: securityConfig.adminEmail, password: securityConfig.adminPassword, role: 'Admin' as const },
+    ];
+    const match = accounts.find(a => a.email.toLowerCase() === trimmedEmail && a.password === password);
+    if (match) onLoginSuccess({ email: match.email, role: match.role });
+    else setError('Invalid email or password.');
   };
 
   return (
@@ -100,7 +48,7 @@ export function LoginWindow({ onLoginSuccess, onBypassToPortal, securityConfig }
         {/* Top Branding Header */}
         <div className="text-center space-y-3">
           <div className="mx-auto bg-slate-950 dark:bg-slate-900 duration-150 p-2.5 rounded-3xl shadow-xl border border-slate-200/40 dark:border-slate-800 w-16 h-16 flex items-center justify-center">
-            <ApexLogo size={52} showText={false} />
+            <ApexLogo size={52} />
           </div>
           <div>
             <h1 className="text-2xl font-black text-slate-900 dark:text-slate-50 tracking-tight leading-none">
@@ -184,65 +132,15 @@ export function LoginWindow({ onLoginSuccess, onBypassToPortal, securityConfig }
               </div>
             )}
 
-            {/* Submit Action */}
             <button
               type="submit"
-              disabled={loading}
               className="w-full py-3 px-4 rounded-xl font-sans font-bold text-xs uppercase tracking-wider text-white bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 disabled:bg-indigo-450 dark:disabled:bg-indigo-950/50 transition-all duration-150 cursor-pointer shadow-md select-none mt-2 flex justify-center items-center gap-2"
               id="login-submit-btn"
             >
-              {loading ? (
-                <>
-                  <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                  <span>Verifying Credentials...</span>
-                </>
-              ) : (
-                <>
-                  <span>Unlock Gym Console</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </>
-              )}
+              <span>Unlock Gym Console</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </button>
-
-
-
           </form>
-
-          {/* Quick-Login Demo Accounts Helper */}
-          <div className="mt-6 pt-5 border-t border-slate-150 dark:border-slate-800 text-left space-y-3">
-            <div className="flex items-center gap-1.5 text-slate-400 dark:text-slate-500">
-              <Key className="w-3.5 h-3.5" />
-              <span className="text-[10px] font-bold uppercase tracking-wider">
-                Preconfigured System Logins
-              </span>
-            </div>
-
-            <div className="flex justify-center">
-              
-              {/* Gym Owner Button */}
-              <button
-                type="button"
-                onClick={() => fillCredentials('owner')}
-                className="p-3 rounded-xl border border-slate-150 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 hover:bg-slate-100 dark:hover:bg-slate-800 text-left cursor-pointer transition-all hover:scale-[1.01] active:scale-99 flex gap-2.5 items-start w-full max-w-sm"
-                title="Fill Gym Owner credentials"
-              >
-                <UserCheck className="w-4 h-4 text-indigo-500 dark:text-indigo-400 mt-0.5 shrink-0" />
-                <div className="space-y-0.5">
-                  <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 block">
-                    Gym Owner Profile
-                  </span>
-                  <span className="text-[9px] text-slate-400 font-mono tracking-tight block">
-                    {CREDENTIALS.owner.email}
-                  </span>
-                  <span className="text-[9px] text-slate-400/90 font-mono tracking-tight block">
-                    Pass: {CREDENTIALS.owner.password}
-                  </span>
-                </div>
-              </button>
-
-            </div>
-          </div>
-
         </div>
 
         {/* Member Portal Bypass option (Realistic & Clever UX design) */}

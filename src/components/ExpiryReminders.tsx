@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Member, WelcomeMessage } from '../types';
-import { calculateDaysRemaining, formatDateDDMMYYYY } from '../utils/dateUtils';
+import { calculateDaysRemaining, formatDateDDMMYYYY, todayISO } from '../utils/dateUtils';
+import { whatsappUrl } from '../utils/common';
 import { 
   MessageSquare, 
   Send, 
@@ -14,15 +15,13 @@ import {
   CheckCircle, 
   AlertCircle, 
   Smartphone, 
-  RefreshCw, 
   FileText,
   Calendar,
   Sparkles,
   Trash2,
   Check,
   UserCheck,
-  Megaphone,
-  HelpCircle
+  Megaphone
 } from 'lucide-react';
 
 interface ExpiryRemindersProps {
@@ -41,8 +40,7 @@ export function ExpiryReminders({
   onUpdateMessageStatus 
 }: ExpiryRemindersProps) {
   // Constant anchor today's date
-  const TODAY_STR = '2026-06-20';
-  const TODAY_DATE = new Date(TODAY_STR);
+  const TODAY_STR = todayISO();
 
   // Active tab selection: 'renewals' vs 'welcome-alerts'
   const [activeTab, setActiveTab] = useState<'renewals' | 'welcome-alerts'>('renewals');
@@ -76,9 +74,7 @@ export function ExpiryReminders({
   const [welcomeStatusFilter, setWelcomeStatusFilter] = useState<'all' | 'Pending' | 'Sent'>('all');
 
   // Days remaining helper calculation
-  const calculateDaysLeft = (expiryDateStr: string): number => {
-    return calculateDaysRemaining(expiryDateStr, TODAY_DATE);
-  };
+  const calculateDaysLeft = (expiryDateStr: string) => calculateDaysRemaining(expiryDateStr);
 
   // Compile individual member's text
   const compileMessage = (member: Member, daysLeft: number) => {
@@ -102,33 +98,7 @@ export function ExpiryReminders({
     localStorage.setItem('ironpulse_template_entry', text);
   };
 
-  // Build clean phone string for WhatsApp API
-  const cleanPhoneForWhatsapp = (phone: string): string => {
-    let cleaned = phone.replace(/[^\d+]/g, '');
-    
-    if (cleaned.startsWith('+91')) {
-      return cleaned.substring(1);
-    }
-    if (cleaned.startsWith('91') && cleaned.length >= 11) {
-      if (cleaned.startsWith('+')) return cleaned.substring(1);
-      return cleaned;
-    }
-
-    if (cleaned.length === 10) {
-      cleaned = defaultCountryCode + cleaned;
-    }
-    
-    if (cleaned.startsWith('+')) {
-      cleaned = cleaned.substring(1);
-    }
-    return cleaned;
-  };
-
-  // Generate official WhatsApp Click-to-Chat URL
-  const generateWhatsappUrl = (phone: string, text: string) => {
-    const cleanedPhone = cleanPhoneForWhatsapp(phone);
-    return `https://api.whatsapp.com/send?phone=${encodeURIComponent(cleanedPhone)}&text=${encodeURIComponent(text)}`;
-  };
+  const generateWhatsappUrl = (phone: string, text: string) => whatsappUrl(phone, text, defaultCountryCode);
 
   // Prepare expiring list data objects
   const expirationsData = useMemo(() => {
@@ -496,7 +466,7 @@ export function ExpiryReminders({
                       </button>
 
                       <button
-                        onClick={() => onUpdateMember(member.id, { reminderSentDate: isSentToday ? undefined : TODAY_STR })}
+                        onClick={() => onUpdateMember(member.id, { reminderSentDate: isSentToday ? '' : TODAY_STR })}
                         className="p-1 px-2.5 text-[10px] text-slate-400 hover:text-slate-600 font-sans font-semibold text-center hover:bg-slate-100 rounded-lg transition-colors"
                       >
                         {isSentToday ? "✕ Mark Unsent" : "✔ Mark Sent manually"}

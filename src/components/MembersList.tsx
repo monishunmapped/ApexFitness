@@ -8,14 +8,15 @@ import { Member, MembershipPlanName, MembershipPlan, AdvancePaymentRecord } from
 import * as XLSX from 'xlsx';
 
 import { generateQrSvg } from '../utils/qrGenerator';
-import { calculateDaysRemaining, calculateExpiryDate, formatDateDDMMYYYY, formatDateISO, parseDate } from '../utils/dateUtils';
+import { calculateDaysRemaining, calculateExpiryDate, formatDateDDMMYYYY, formatDateISO, parseDate, todayISO } from '../utils/dateUtils';
+import { downloadCsv, fileToDataUrl, parseDobCode, whatsappUrl } from '../utils/common';
+import { membersDb } from '../lib/firebase';
 import { 
   Plus, 
   Search, 
   Filter, 
   Mail, 
   Phone, 
-  Key, 
   Calendar, 
   FileText, 
   Trash2, 
@@ -24,7 +25,6 @@ import {
   Play, 
   QrCode,
   X,
-  PlusCircle,
   Clock,
   Printer,
   Camera,
@@ -33,21 +33,13 @@ import {
   Download,
   Trophy,
   Award,
-  User,
   Image,
   CheckCircle2,
   PauseCircle,
-  XCircle,
   AlertCircle,
-  Sun,
-  Moon,
   Wallet,
-  CreditCard,
-  Receipt,
-  DollarSign,
   History,
-  HandCoins,
-  Check
+  HandCoins
 } from 'lucide-react';
 
 interface MembersListProps {
@@ -210,13 +202,7 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setCapturedPhoto(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
+    if (file) fileToDataUrl(file).then(setCapturedPhoto);
   };
 
   // Handle addition
@@ -227,50 +213,22 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
       return;
     }
 
-    const cleanDob = newDob.trim();
-    // Validate DOB format to be 8 digits (DDMMYYYY) or 6 digits (DDMMYY)
-    if (!/^\d{8}$/.test(cleanDob) && !/^\d{6}$/.test(cleanDob)) {
-      alert('Please enter Date of Birth in DDMMYYYY format (8 digits, e.g. 20061988 for 20 June 1988) or DDMMYY (6 digits).');
+    const parsedDob = newDob.trim().length >= 6 ? parseDobCode(newDob) : null;
+    if (!parsedDob?.dob) {
+      alert('Please enter a valid Date of Birth in DDMMYYYY format (8 digits, e.g. 20061988 for 20 June 1988) or DDMMYY (6 digits).');
+      return;
+    }
+    const recordedDobId = parsedDob.id;
+    const [year, month, day] = parsedDob.dob.split('-');
+    const gatePin = `${day}${month}${year.slice(-2)}`;
+
+    if (members.some(m => m.id === recordedDobId)) {
+      alert(`A member with DOB ID "${recordedDobId}" is already registered. Membership IDs (DOB) must be unique.`);
       return;
     }
 
-    let recordedDobId = cleanDob;
-    let gatePin = '';
-    let day = '';
-    let month = '';
-    let year = '';
-
-    if (cleanDob.length === 8) {
-      day = cleanDob.slice(0, 2);
-      month = cleanDob.slice(2, 4);
-      year = cleanDob.slice(4, 8);
-      gatePin = `${day}${month}${year.slice(-2)}`;
-      recordedDobId = cleanDob; // Record original DDMMYYYY
-    } else {
-      day = cleanDob.slice(0, 2);
-      month = cleanDob.slice(2, 4);
-      const yy = cleanDob.slice(4, 6);
-      year = parseInt(yy) > 30 ? `19${yy}` : `20${yy}`;
-      recordedDobId = `${day}${month}${year}`;
-      gatePin = cleanDob;
-    }
-
-    // Validate uniqueness of DOB amongst members
-    const isDuplicate = members.some(m => 
-      m.id === recordedDobId || 
-      (m.id.length === 8 && (m.id.slice(0, 4) + m.id.slice(6, 8)) === gatePin)
-    );
-    if (isDuplicate) {
-      alert(`A member with DOB ID "${recordedDobId}" or Gate PIN "${gatePin}" is already registered. Membership IDs (DOB) must be unique.`);
-      return;
-    }
-
-    const planObj = plans.find(p => p.name === newPlan)!;
-    
-    // Join date = Today (2026-06-20)
-    const joinDate = '2026-06-20';
-    
-    // Calculate expiry date correctly using dateUtils
+    const planObj = plans.find(p => p.name === newPlan);
+    const joinDate = todayISO();
     const { expiryDateIso } = calculateExpiryDate(joinDate, planObj ? planObj.durationDays : 30);
 
     const finalPhoto = capturedPhoto || newAvatarUrl.trim() || undefined;
@@ -427,13 +385,13 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
 
   // Execute quick renew: Resets relative to today
   const handleQuickRenew = (m: Member) => {
-    const planObj = plans.find(p => p.name === m.plan) || plans[1];
-    const { expiryDateIso } = calculateExpiryDate('2026-06-20', planObj ? planObj.durationDays : 30);
-    
+    const planObj = plans.find(p => p.name === m.plan) || plans[0];
+    const today = todayISO();
+    const { expiryDateIso } = calculateExpiryDate(today, planObj ? planObj.durationDays : 30);
     onUpdateMember(m.id, {
       status: 'Active',
       expiryDate: expiryDateIso,
-      notes: `${m.notes || ''} Renewed on 2026-06-20.`.trim()
+      notes: `${m.notes || ''} Renewed on ${today}.`.trim()
     });
   };
 
@@ -455,9 +413,9 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
   const handleBulkPlanChange = (planName: MembershipPlanName) => {
     const planObj = plans.find(p => p.name === planName);
     if (!planObj) return;
-    if (confirm(`Are you sure you want to change the membership plan of ${selectedMemberIds.length} selected member(s) to "${planName}"? This will also update their expiration date relative to today (2026-06-20).`)) {
+    if (confirm(`Are you sure you want to change the membership plan of ${selectedMemberIds.length} selected member(s) to "${planName}"? This will also update their expiration date relative to today (${todayISO()}).`)) {
       selectedMemberIds.forEach(id => {
-        const { expiryDateIso } = calculateExpiryDate('2026-06-20', planObj.durationDays);
+        const { expiryDateIso } = calculateExpiryDate(todayISO(), planObj.durationDays);
         onUpdateMember(id, { plan: planName, status: 'Active', expiryDate: expiryDateIso });
       });
       setSelectedMemberIds([]);
@@ -483,58 +441,10 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
   };
 
   const handleExportCSV = () => {
-    const headers = [
-      'ID/DOB',
-      'Name',
-      'Email',
-      'Primary Phone',
-      'Alternate Phone',
-      'Status',
-      'Plan Tier',
-      'Gender',
-      'Join Date',
-      'Expiry Date',
-      'Total Check-Ins',
-      'Last Check-In',
-      'Notes'
-    ];
-    
-    // Create rows with proper CSV escaping
-    const rows = members.map(m => [
-      m.id,
-      m.name,
-      m.email,
-      m.phone,
-      m.alternatePhone || 'N/A',
-      m.status,
-      m.plan,
-      m.gender || 'Not Specified',
-      m.joinDate,
-      m.expiryDate,
-      m.totalCheckIns,
-      m.lastCheckIn || 'N/A',
-      m.notes || ''
+    downloadCsv(`gym_members_export_${todayISO()}.csv`, [
+      ['ID/DOB', 'Name', 'Email', 'Primary Phone', 'Alternate Phone', 'Status', 'Plan Tier', 'Gender', 'Join Date', 'Expiry Date', 'Total Check-Ins', 'Last Check-In', 'Notes'],
+      ...members.map(m => [m.id, m.name, m.email, m.phone, m.alternatePhone || 'N/A', m.status, m.plan, m.gender || 'Not Specified', m.joinDate, m.expiryDate, m.totalCheckIns, m.lastCheckIn || 'N/A', m.notes]),
     ]);
-
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => 
-        row.map(val => {
-          const stringVal = String(val).replace(/"/g, '""'); // Escape inner double quotes
-          return `"${stringVal}"`;
-        }).join(',')
-      )
-    ].join('\r\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `gym_members_export_${new Date().toISOString().slice(0, 10)}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
   const handleExcelFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -585,6 +495,7 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
         }
 
         const parsed: any[] = [];
+        const usedIds = new Set<string>();
         
         rows.forEach((row: any, index: number) => {
           if (!row || row.length === 0) return;
@@ -592,57 +503,28 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
           const name = row[nameIdx] ? String(row[nameIdx]).trim() : '';
           if (!name) return; // skip row with empty name
           
-          // ID / DOB: Format DD/MM//YYYY or DD/MM/YYYY recorded as DDMM (DD = Date, MM = Month)
           let rawId = '';
-          if (idIdx !== -1 && row[idIdx] !== undefined && row[idIdx] !== null && String(row[idIdx]).trim() !== '') {
-            const rawVal = row[idIdx];
-
-            // Handle Excel numeric date serials
-            if (typeof rawVal === 'number' && rawVal > 1000) {
-              if ((XLSX as any).SSF && (XLSX as any).SSF.parse_date_code) {
-                try {
-                  const dateObj = (XLSX as any).SSF.parse_date_code(rawVal);
-                  if (dateObj && dateObj.d && dateObj.m) {
-                    const dd = String(dateObj.d).padStart(2, '0');
-                    const mm = String(dateObj.m).padStart(2, '0');
-                    rawId = `${dd}${mm}`;
-                  }
-                } catch (e) {
-                  // ignore
-                }
-              }
+          let dob: string | undefined;
+          const rawVal = idIdx !== -1 ? row[idIdx] : undefined;
+          if (rawVal !== undefined && rawVal !== null && String(rawVal).trim() !== '') {
+            let digits = '';
+            if (typeof rawVal === 'number' && rawVal > 1000 && rawVal < 100000) {
+              const d = XLSX.SSF.parse_date_code(rawVal);
+              if (d?.d && d?.m) digits = `${String(d.d).padStart(2, '0')}${String(d.m).padStart(2, '0')}${d.y || ''}`;
             }
-
-            if (!rawId) {
-              const strVal = String(rawVal).trim();
-              // Split by any non-digit sequences (handles DD/MM//YYYY, DD/MM/YYYY, DD-MM-YYYY, DD.MM.YYYY, etc.)
-              const parts = strVal.split(/[^0-9]+/).filter(Boolean);
-
-              if (parts.length >= 2) {
-                const dd = parts[0].padStart(2, '0');
-                const mm = parts[1].padStart(2, '0');
-                rawId = `${dd}${mm}`;
-              } else if (parts.length === 1) {
-                const digits = parts[0];
-                if (digits.length >= 4) {
-                  rawId = digits.slice(0, 4);
-                } else if (digits.length === 3) {
-                  rawId = digits.padStart(4, '0');
-                } else {
-                  rawId = strVal.replace(/[^a-zA-Z0-9]/g, '');
-                }
-              } else {
-                rawId = strVal.replace(/[^a-zA-Z0-9]/g, '');
-              }
+            if (!digits) {
+              const parts = String(rawVal).trim().split(/[^0-9]+/).filter(Boolean);
+              digits = parts.length >= 2 ? parts[0].padStart(2, '0') + parts[1].padStart(2, '0') + (parts[2] || '') : parts[0] || '';
             }
+            const parsedDob = parseDobCode(digits) || parseDobCode(digits.slice(0, 4));
+            rawId = parsedDob?.id || String(rawVal).replace(/[^a-zA-Z0-9]/g, '');
+            dob = parsedDob?.dob;
           }
+          if (!rawId) rawId = `99${String(index + 1).padStart(2, '0')}`;
 
-          if (!rawId) {
-            // sequential index fallback
-            rawId = `99${String(index + 1).padStart(2, '0')}`;
-          }
-          
-          const id = rawId;
+          let id = rawId;
+          for (let n = 2; usedIds.has(id); n++) id = `${rawId}-${n}`;
+          usedIds.add(id);
 
           const email = emailIdx !== -1 && row[emailIdx] ? String(row[emailIdx]).trim() : `${name.toLowerCase().replace(/\s+/g, '')}@example.com`;
           const phone = phoneIdx !== -1 && row[phoneIdx] ? String(row[phoneIdx]).trim() : '+91 99999 99999';
@@ -681,7 +563,7 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
           }
           
           // Resolve join date
-          let joinDate = '2026-06-20';
+          let joinDate = todayISO();
           if (joinIdx !== -1 && row[joinIdx]) {
             const jd = String(row[joinIdx]).trim();
             joinDate = formatDateISO(jd);
@@ -712,6 +594,7 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
 
           parsed.push({
             id,
+            dob,
             name,
             email,
             phone,
@@ -748,46 +631,14 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
     setImportStatusMessage("Directly replicating members to database...");
     
     try {
-      let createdCount = 0;
-      let updatedCount = 0;
-      
-      for (const m of importPreview) {
-        const exists = members.some(existingMem => existingMem.id === m.id);
-        if (exists) {
-          // Replicate update
-          await onUpdateMember(m.id, {
-            name: m.name,
-            email: m.email,
-            phone: m.phone,
-            status: m.status,
-            plan: m.plan,
-            joinDate: m.joinDate,
-            expiryDate: m.expiryDate,
-            gender: m.gender,
-            notes: m.notes,
-            autoRenew: m.autoRenew
-          });
-          updatedCount++;
-        } else {
-          // Replicate create
-          await onAddMember({
-            id: m.id,
-            name: m.name,
-            email: m.email,
-            phone: m.phone,
-            status: m.status,
-            plan: m.plan,
-            joinDate: m.joinDate,
-            expiryDate: m.expiryDate,
-            gender: m.gender,
-            notes: m.notes,
-            autoRenew: m.autoRenew,
-            photoUrl: m.photoUrl
-          });
-          createdCount++;
-        }
-      }
-      
+      const existingIds = new Set(members.map(m => m.id));
+      const created = importPreview.filter(m => !existingIds.has(m.id));
+      const updated = importPreview.filter(m => existingIds.has(m.id));
+      await membersDb.put(...created);
+      await Promise.all(updated.map(({ id, totalCheckIns, lastCheckIn, ...rest }) => membersDb.patch(id, rest)));
+      const createdCount = created.length;
+      const updatedCount = updated.length;
+
       setImportStatusMessage(`Import successfully finished! Replicated ${createdCount + updatedCount} members (${createdCount} new, ${updatedCount} updated) directly to the database.`);
       setImportPreview([]);
       setImportFile(null);
@@ -1068,7 +919,7 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
         >
           <div className="md:col-span-3 pb-2 border-b border-slate-100 flex justify-between items-center">
             <h3 className="font-sans font-bold text-slate-900">New Membership Form</h3>
-            <span className="text-[10px] text-sky-605 font-mono font-bold bg-sky-50 px-2.5 py-1 rounded">JOIN DATE: 2026-06-20</span>
+            <span className="text-[10px] text-sky-605 font-mono font-bold bg-sky-50 px-2.5 py-1 rounded">JOIN DATE: {todayISO()}</span>
           </div>
 
           <div className="space-y-1">
@@ -1658,7 +1509,7 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700 text-sm">
               {filteredMembers.map(m => {
-                const daysRemaining = calculateDaysRemaining(m.expiryDate, '2026-06-20');
+                const daysRemaining = calculateDaysRemaining(m.expiryDate);
                 const isChecked = selectedMemberIds.includes(m.id);
                 return (
                   <tr key={m.id} className={`hover:bg-slate-50/40 transition-colors ${isChecked ? 'bg-indigo-50/20' : ''}`}>
@@ -2272,7 +2123,7 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
               {(() => {
                 const sel = members.find(m => m.id === advanceMemberId);
                 if (!sel) return null;
-                const daysRem = calculateDaysRemaining(sel.expiryDate, '2026-06-20');
+                const daysRem = calculateDaysRemaining(sel.expiryDate);
                 return (
                   <div className="bg-purple-50/60 border border-purple-150 rounded-2xl p-3.5 text-xs text-purple-950 space-y-2">
                     <div className="flex items-center justify-between flex-wrap gap-2">
@@ -2690,9 +2541,9 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
               </button>
               {activeReceipt.memberPhone && (
                 <a
-                  href={`https://wa.me/${activeReceipt.memberPhone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
+                  href={whatsappUrl(activeReceipt.memberPhone,
                     `*Apex Fitness - Advance Payment Receipt*\nReceipt No: ${activeReceipt.receiptNo}\nMember: ${activeReceipt.memberName} (${activeReceipt.memberId})\nAmount Received: ${activeReceipt.currencySymbol}${activeReceipt.amount}\nMode: ${activeReceipt.paymentMode}\nPurpose: ${activeReceipt.purpose}\nNew Expiry Date: ${formatDateDDMMYYYY(activeReceipt.memberNewExpiry)}\nTotal Advance Credit: ${activeReceipt.currencySymbol}${activeReceipt.totalAdvanceBalance}\n\nThank you for choosing Apex Fitness!`
-                  )}`}
+                  )}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-colors flex items-center justify-center gap-1 cursor-pointer"

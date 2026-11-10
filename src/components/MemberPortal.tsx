@@ -1,20 +1,11 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- * 
- * Standalone Member Portal Component
- * Real-time self-check-in gate and gym feedback portal synced directly with Firestore database.
- */
-
-import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Member, Feedback, CheckIn } from '../types';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { Member, Feedback, CheckInMethod, CheckInResponse } from '../types';
 import { FeedbackForm } from './FeedbackForm';
+import { LiveClock } from './LiveClock';
+import { findMemberByCode, playBeep } from '../utils/common';
 import { 
   CheckCircle, 
   XCircle, 
-  User, 
-  Calendar,
-  AlertCircle,
   X,
   Clock,
   Search,
@@ -22,275 +13,62 @@ import {
   Volume2,
   VolumeX,
   Fingerprint,
-  Lightbulb,
-  MessageSquare,
-  ShieldCheck,
   Zap,
   Sparkles,
   Keyboard
 } from 'lucide-react';
-import { dbAddCheckIn, dbUpdateMember, dbAddFeedback } from '../lib/firebase';
 
 interface MemberPortalProps {
   members: Member[];
-  onCheckIn: (memberId: string, method: 'Self QR Scan' | 'Front Desk Scan' | 'Manual Select' | 'Biometric Fingerprint') => { 
-    success: boolean; 
-    message: string; 
-    status: 'Granted' | 'Expired Plan' | 'No Active Plan' 
-  };
-  onSubmitFeedback?: (feedback: any) => Promise<void>;
+  onCheckIn: (memberId: string, method: CheckInMethod) => CheckInResponse;
+  onSubmitFeedback: (feedback: Omit<Feedback, 'id' | 'timestamp' | 'status'>) => Promise<void>;
 }
+
+const PIN_LENGTHS = [4, 6, 8];
 
 export function MemberPortal({ members, onCheckIn, onSubmitFeedback }: MemberPortalProps) {
   const [authMode, setAuthMode] = useState<'search' | 'pin' | 'biometrics' | 'feedback'>('search');
-  const [nameQuery, setNameQuery] = useState<string>('');
-  const [dobPin, setDobPin] = useState<string>('');
-  
-  // Biometric states
+  const [nameQuery, setNameQuery] = useState('');
+  const [dobPin, setDobPin] = useState('');
   const [biometricQuery, setBiometricQuery] = useState('');
   const [biometricSelectedMember, setBiometricSelectedMember] = useState<Member | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [scanStatusMsg, setScanStatusMsg] = useState('Place finger on pad to scan');
-  const scanIntervalRef = useRef<any>(null);
-
-  useEffect(() => {
-    return () => {
-      if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
-    };
-  }, []);
-
-  const [checkInResult, setCheckInResult] = useState<{ 
-    success: boolean; 
-    message: string; 
-    memberName: string; 
-    plan: string; 
-    id: string; 
-    status: 'Granted' | 'Expired Plan' | 'No Active Plan' 
-  } | null>(null);
-
-  const [liveTime, setLiveTime] = useState<Date>(new Date());
+  const scanIntervalRef = useRef<ReturnType<typeof setInterval>>(undefined);
+  const [checkInResult, setCheckInResult] = useState<(CheckInResponse & { memberName: string; plan: string; id: string }) | null>(null);
   const [inputError, setInputError] = useState<string | null>(null);
-  const [isSoundEnabled, setIsSoundEnabled] = useState<boolean>(true);
-  const [isAnimationActive, setIsAnimationActive] = useState<'success' | 'fail' | null>(null);
-  const [animatedName, setAnimatedName] = useState<string>('');
-  const [showVirtualKeyboard, setShowVirtualKeyboard] = useState<boolean>(false);
-  const [keyboardCaps, setKeyboardCaps] = useState<boolean>(false);
+  const [isSoundEnabled, setIsSoundEnabled] = useState(true);
+  const [showVirtualKeyboard, setShowVirtualKeyboard] = useState(false);
+  const [keyboardCaps, setKeyboardCaps] = useState(false);
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setLiveTime(new Date());
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
+  useEffect(() => () => clearInterval(scanIntervalRef.current), []);
 
-  // Hardware Physical Keyboard Event Listener for Kiosks and Laptops
-  useEffect(() => {
-    const handlePhysicalKeyDown = (e: KeyboardEvent) => {
-      // Don't intercept if user is typing in standard HTML inputs or textareas unless it's PIN mode
-      const activeElement = document.activeElement;
-      const isInputFocused = activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA');
+  const beep = (success: boolean) => isSoundEnabled && playBeep(success);
 
-      if (checkInResult) {
-        if (e.key === 'Enter' || e.key === 'Escape' || e.key === ' ') {
-          e.preventDefault();
-          resetPortalState();
-        }
-        return;
-      }
-
-      if (authMode === 'pin' && !isInputFocused) {
-        if (/^[0-9]$/.test(e.key)) {
-          e.preventDefault();
-          handleKeyPress(e.key);
-        } else if (e.key === 'Backspace') {
-          e.preventDefault();
-          handleBackspace();
-        } else if (e.key === 'Enter') {
-          e.preventDefault();
-          if (dobPin.length === 4) {
-            handleSelfCheckIn(dobPin);
-          }
-        } else if (e.key === 'Escape' || e.key.toLowerCase() === 'c') {
-          e.preventDefault();
-          handleClear();
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handlePhysicalKeyDown);
-    return () => window.removeEventListener('keydown', handlePhysicalKeyDown);
-  }, [authMode, dobPin, checkInResult]);
-
-  // Play synthetic audio beep for gate check-in feedback
-  const playBeep = (success: boolean) => {
-    if (!isSoundEnabled) return;
-    try {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioContextClass) return;
-      const audioCtx = new AudioContextClass();
-      if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-      }
-      const now = audioCtx.currentTime;
-
-      if (success) {
-        const osc1 = audioCtx.createOscillator();
-        const gain1 = audioCtx.createGain();
-        osc1.type = 'sine';
-        osc1.frequency.setValueAtTime(659.25, now); // E5
-        gain1.gain.setValueAtTime(0.08, now);
-        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-        osc1.connect(gain1);
-        gain1.connect(audioCtx.destination);
-        osc1.start(now);
-        osc1.stop(now + 0.15);
-
-        const osc2 = audioCtx.createOscillator();
-        const gain2 = audioCtx.createGain();
-        osc2.type = 'sine';
-        osc2.frequency.setValueAtTime(880, now + 0.08); // A5
-        gain2.gain.setValueAtTime(0.08, now + 0.08);
-        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-        osc2.connect(gain2);
-        gain2.connect(audioCtx.destination);
-        osc2.start(now + 0.08);
-        osc2.stop(now + 0.3);
-      } else {
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(140, now);
-        gain.gain.setValueAtTime(0.12, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start(now);
-        osc.stop(now + 0.35);
-      }
-    } catch (e) {
-      console.warn("AudioContext error:", e);
-    }
-  };
-
-  const startFingerprintScan = () => {
-    if (!biometricSelectedMember) return;
-    setIsScanning(true);
-    setScanProgress(0);
-    setScanStatusMsg('Initializing biometric scanner...');
-    
-    let progress = 0;
-    if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
-    
-    scanIntervalRef.current = setInterval(() => {
-      progress += 10;
-      if (progress === 30) {
-        setScanStatusMsg('Scanning fingerprint ridges...');
-      } else if (progress === 60) {
-        setScanStatusMsg('Matching template with database...');
-      } else if (progress === 90) {
-        setScanStatusMsg('Verifying membership status...');
-      }
-      
-      if (progress >= 100) {
-        clearInterval(scanIntervalRef.current);
-        setIsScanning(false);
-        setScanProgress(100);
-        setScanStatusMsg('Fingerprint template verified!');
-        
-        triggerCheckIn(biometricSelectedMember, 'Biometric Fingerprint');
-
-        setBiometricSelectedMember(null);
-        setBiometricQuery('');
-        setScanProgress(0);
-        setScanStatusMsg('Place finger on pad to scan');
-      } else {
-        setScanProgress(progress);
-      }
-    }, 200);
-  };
-
-  const triggerCheckIn = async (member: Member, method: 'Self QR Scan' | 'Biometric Fingerprint' | 'Manual Select') => {
+  const triggerCheckIn = (member: Member, method: CheckInMethod) => {
     const response = onCheckIn(member.id, method);
-    playBeep(response.success);
-
-    // Sync check-in to Firestore directly if onCheckIn didn't already
-    const nowIso = new Date().toISOString();
-    if (response.success) {
-      const checkInRecord: CheckIn = {
-        id: `chk_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-        memberId: member.id,
-        memberName: member.name,
-        timestamp: nowIso,
-        planType: member.plan || 'Monthly Core',
-        method: method === 'Biometric Fingerprint' ? 'Self QR Scan' : method,
-        status: response.status
-      };
-      await dbAddCheckIn(checkInRecord);
-      await dbUpdateMember(member.id, {
-        lastCheckIn: nowIso,
-        totalCheckIns: (member.totalCheckIns || 0) + 1
-      });
-    }
-
-    setCheckInResult({
-      success: response.success,
-      message: response.message,
-      memberName: member.name,
-      plan: member.plan,
-      id: member.id,
-      status: response.status
-    });
-
-    setAnimatedName(member.name);
-    setIsAnimationActive(response.success ? 'success' : 'fail');
-    setTimeout(() => {
-      setIsAnimationActive(null);
-    }, 2500);
+    beep(response.success);
+    setCheckInResult({ ...response, memberName: member.name, plan: member.plan, id: member.id });
   };
 
-  // Central PIN check-in handler
-  const handleSelfCheckIn = (enteredDob: string) => {
-    const cleanInput = enteredDob.trim();
-    if (cleanInput.length !== 4 && cleanInput.length !== 6 && cleanInput.length !== 8) {
-      setInputError('Please enter your 4-digit Gate PIN (DDMM) or DOB.');
+  const handleSelfCheckIn = (pin: string) => {
+    if (!PIN_LENGTHS.includes(pin.length)) {
+      setInputError('Please enter your 4-digit Gate PIN (DDMM) or full DOB.');
       return;
     }
-
-    const matchedMember = members.find(m => {
-      if (m.id === cleanInput) return true;
-      if (m.id.length >= 4 && m.id.slice(0, 4) === cleanInput) return true;
-      if (m.id.length === 8) {
-        const ddmmyy = m.id.slice(0, 4) + m.id.slice(6, 8);
-        if (ddmmyy === cleanInput) return true;
-      }
-      if (m.dob && m.dob.includes('-')) {
-        const parts = m.dob.split('-');
-        if (parts.length === 3) {
-          const [yyyy, mm, dd] = parts;
-          const ddmm = `${dd}${mm}`;
-          const ddmmyy = `${dd}${mm}${yyyy.slice(-2)}`;
-          const ddmmyyyy = `${dd}${mm}${yyyy}`;
-          if (ddmm === cleanInput || ddmmyy === cleanInput || ddmmyyyy === cleanInput) return true;
-        }
-      }
-      return false;
-    });
-
-    if (!matchedMember) {
-      setInputError(`No member registered matching Gate PIN or DOB: ${enteredDob}.`);
-      playBeep(false);
+    const { member, ambiguous } = findMemberByCode(members, pin);
+    if (!member) {
+      setInputError(ambiguous ? 'More than one member shares this PIN. Please enter your full DOB (DDMMYYYY).' : `No member registered matching Gate PIN or DOB: ${pin}.`);
+      beep(false);
       return;
     }
-
-    triggerCheckIn(matchedMember, 'Self QR Scan');
+    triggerCheckIn(member, 'Self QR Scan');
   };
 
   const handleKeyPress = (num: string) => {
     setInputError(null);
-    if (dobPin.length < 4) {
-      setDobPin(prev => prev + num);
-    }
+    setDobPin(prev => (prev.length < 8 ? prev + num : prev));
   };
 
   const handleBackspace = () => {
@@ -310,83 +88,77 @@ export function MemberPortal({ members, onCheckIn, onSubmitFeedback }: MemberPor
     setCheckInResult(null);
   };
 
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const tag = document.activeElement?.tagName;
+      if (checkInResult) {
+        if (['Enter', 'Escape', ' '].includes(e.key)) {
+          e.preventDefault();
+          resetPortalState();
+        }
+        return;
+      }
+      if (authMode !== 'pin' || tag === 'INPUT' || tag === 'TEXTAREA') return;
+      if (/^[0-9]$/.test(e.key)) handleKeyPress(e.key);
+      else if (e.key === 'Backspace') handleBackspace();
+      else if (e.key === 'Enter') handleSelfCheckIn(dobPin);
+      else if (e.key === 'Escape' || e.key.toLowerCase() === 'c') handleClear();
+      else return;
+      e.preventDefault();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [authMode, dobPin, checkInResult, members]);
+
+  const startFingerprintScan = () => {
+    const member = biometricSelectedMember;
+    if (!member) return;
+    const stages: Record<number, string> = { 30: 'Scanning fingerprint ridges...', 60: 'Matching template with database...', 90: 'Verifying membership status...' };
+    let progress = 0;
+    setIsScanning(true);
+    setScanProgress(0);
+    setScanStatusMsg('Initializing biometric scanner...');
+    clearInterval(scanIntervalRef.current);
+    scanIntervalRef.current = setInterval(() => {
+      progress += 10;
+      if (stages[progress]) setScanStatusMsg(stages[progress]);
+      if (progress < 100) {
+        setScanProgress(progress);
+        return;
+      }
+      clearInterval(scanIntervalRef.current);
+      setIsScanning(false);
+      triggerCheckIn(member, 'Biometric Fingerprint');
+      setBiometricSelectedMember(null);
+      setBiometricQuery('');
+      setScanProgress(0);
+      setScanStatusMsg('Place finger on pad to scan');
+    }, 200);
+  };
+
   const handleVirtualKeyClick = (char: string) => {
-    if (authMode === 'search') {
-      if (char === 'BACKSPACE') {
-        setNameQuery(prev => prev.slice(0, -1));
-      } else if (char === 'CLEAR') {
-        setNameQuery('');
-      } else if (char === 'SPACE') {
-        setNameQuery(prev => prev + ' ');
-      } else {
-        const charToAdd = keyboardCaps ? char.toUpperCase() : char.toLowerCase();
-        setNameQuery(prev => prev + charToAdd);
-      }
-    } else if (authMode === 'biometrics') {
-      if (char === 'BACKSPACE') {
-        setBiometricQuery(prev => prev.slice(0, -1));
-      } else if (char === 'CLEAR') {
-        setBiometricQuery('');
-      } else if (char === 'SPACE') {
-        setBiometricQuery(prev => prev + ' ');
-      } else {
-        const charToAdd = keyboardCaps ? char.toUpperCase() : char.toLowerCase();
-        setBiometricQuery(prev => prev + charToAdd);
-      }
-    } else if (authMode === 'pin') {
-      if (char === 'BACKSPACE') {
-        handleBackspace();
-      } else if (char === 'CLEAR') {
-        handleClear();
-      } else if (/^[0-9]$/.test(char)) {
-        handleKeyPress(char);
-      }
+    if (authMode === 'pin') {
+      if (char === 'BACKSPACE') handleBackspace();
+      else if (char === 'CLEAR') handleClear();
+      else if (/^[0-9]$/.test(char)) handleKeyPress(char);
+      return;
     }
+    const setQuery = authMode === 'biometrics' ? setBiometricQuery : authMode === 'search' ? setNameQuery : null;
+    if (!setQuery) return;
+    if (char === 'BACKSPACE') setQuery(prev => prev.slice(0, -1));
+    else if (char === 'CLEAR') setQuery('');
+    else setQuery(prev => prev + (char === 'SPACE' ? ' ' : keyboardCaps ? char.toUpperCase() : char.toLowerCase()));
   };
 
-  // Search Results for Name Tab
-  const searchResults = useMemo(() => {
-    const cleanQuery = nameQuery.trim().toLowerCase();
-    if (cleanQuery === '') return [];
-    return members.filter(m => 
-      m.name.toLowerCase().includes(cleanQuery) || 
-      m.id.includes(cleanQuery) ||
-      (m.email && m.email.toLowerCase().includes(cleanQuery))
-    ).slice(0, 5);
-  }, [nameQuery, members]);
-
-  // Search Results for Biometrics Tab
-  const biometricSearchResults = useMemo(() => {
-    const cleanQuery = biometricQuery.trim().toLowerCase();
-    if (cleanQuery === '') return [];
-    return members.filter(m => 
-      m.name.toLowerCase().includes(cleanQuery) || 
-      m.id.includes(cleanQuery)
-    ).slice(0, 5);
-  }, [biometricQuery, members]);
-
-  // Quick list of active members
-  const suggestedMembers = useMemo(() => {
-    return members.filter(m => m.status === 'Active').slice(0, 4);
-  }, [members]);
-
-  const handleFeedbackSubmit = async (feedbackData: any) => {
-    if (onSubmitFeedback) {
-      await onSubmitFeedback(feedbackData);
-    } else {
-      const newFeedback: Feedback = {
-        id: `fb_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-        memberName: feedbackData.memberName || 'Anonymous Member',
-        memberEmail: feedbackData.memberEmail || '',
-        category: feedbackData.category || 'General',
-        rating: feedbackData.rating || 5,
-        suggestion: feedbackData.suggestion || '',
-        timestamp: new Date().toISOString(),
-        status: 'Pending'
-      };
-      await dbAddFeedback(newFeedback);
-    }
+  const search = (query: string, byEmail = false) => {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    return members.filter(m => m.name.toLowerCase().includes(q) || m.id.includes(q) || (byEmail && m.email?.toLowerCase().includes(q))).slice(0, 5);
   };
+
+  const searchResults = useMemo(() => search(nameQuery, true), [nameQuery, members]);
+  const biometricSearchResults = useMemo(() => search(biometricQuery), [biometricQuery, members]);
+  const suggestedMembers = useMemo(() => members.filter(m => m.status === 'Active').slice(0, 4), [members]);
 
   return (
     <div className="max-w-md mx-auto bg-slate-50 border border-slate-200/60 rounded-3xl overflow-hidden shadow-md font-sans text-slate-800 relative" id="standalone-member-portal">
@@ -444,7 +216,7 @@ export function MemberPortal({ members, onCheckIn, onSubmitFeedback }: MemberPor
             <span className="text-[11px] font-mono font-extrabold tracking-wider text-slate-500">GATE CLOCK</span>
           </div>
           <span className="text-xs font-mono font-black text-indigo-950">
-            {liveTime.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })} • {liveTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            <LiveClock render={now => `${now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })} • ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`} />
           </span>
         </div>
 
@@ -639,7 +411,7 @@ export function MemberPortal({ members, onCheckIn, onSubmitFeedback }: MemberPor
                         {searchResults.map((member) => (
                           <div
                             key={member.id}
-                            onClick={() => triggerCheckIn(member, 'Self QR Scan')}
+                            onClick={() => triggerCheckIn(member, 'Manual Select')}
                             className="p-2.5 rounded-xl border border-slate-150 bg-slate-50 hover:bg-slate-900 hover:text-white cursor-pointer transition-all flex justify-between items-center group text-left"
                           >
                             <div className="flex items-center gap-2.5">
@@ -684,7 +456,7 @@ export function MemberPortal({ members, onCheckIn, onSubmitFeedback }: MemberPor
                       <button
                         key={member.id}
                         type="button"
-                        onClick={() => triggerCheckIn(member, 'Self QR Scan')}
+                        onClick={() => triggerCheckIn(member, 'Manual Select')}
                         className="p-2 rounded-xl border border-slate-150 hover:border-slate-900 bg-slate-50 hover:bg-slate-100 transition-all text-left flex items-center gap-2 cursor-pointer"
                       >
                         <div className="w-7 h-7 rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px] font-bold shrink-0">
@@ -709,18 +481,18 @@ export function MemberPortal({ members, onCheckIn, onSubmitFeedback }: MemberPor
                     ENTRY GATE PIN (DATE OF BIRTH: DDMM)
                   </h3>
                   <p className="text-[11px] text-slate-500">
-                    Use 4-digit <strong className="text-slate-800 font-bold">DDMM</strong> (e.g. <strong className="text-emerald-600 font-bold">2502</strong> for 25th Feb).
+                    Use 4-digit <strong className="text-slate-800 font-bold">DDMM</strong> (e.g. <strong className="text-emerald-600 font-bold">2502</strong> for 25th Feb), or your full DOB if asked.
                   </p>
                 </div>
 
                 {/* PIN Display Boxes */}
                 <div className="flex justify-center gap-2 py-2">
-                  {[0, 1, 2, 3].map((index) => {
+                  {Array.from({ length: Math.max(4, dobPin.length) }, (_, index) => {
                     const digit = dobPin[index];
                     return (
                       <div
                         key={index}
-                        className={`w-12 h-14 rounded-xl border-2 flex items-center justify-center text-xl font-mono font-black transition-all ${
+                        className={`${dobPin.length > 4 ? 'w-9' : 'w-12'} h-14 rounded-xl border-2 flex items-center justify-center text-xl font-mono font-black transition-all ${
                           digit 
                             ? 'border-slate-900 bg-white text-slate-900 shadow-sm' 
                             : 'border-slate-200 bg-slate-100 text-slate-300'
@@ -775,7 +547,7 @@ export function MemberPortal({ members, onCheckIn, onSubmitFeedback }: MemberPor
 
                 <button
                   type="button"
-                  disabled={dobPin.length !== 4}
+                  disabled={!PIN_LENGTHS.includes(dobPin.length)}
                   onClick={() => handleSelfCheckIn(dobPin)}
                   className="w-full py-3.5 rounded-2xl font-bold text-xs uppercase tracking-wider text-white bg-slate-900 hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 transition-all shadow-md cursor-pointer flex justify-center items-center gap-2"
                 >
@@ -883,7 +655,7 @@ export function MemberPortal({ members, onCheckIn, onSubmitFeedback }: MemberPor
             {/* TAB 4: GYM FEEDBACK */}
             {authMode === 'feedback' && (
               <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
-                <FeedbackForm members={members} onSubmitFeedback={handleFeedbackSubmit} />
+                <FeedbackForm members={members} onSubmitFeedback={onSubmitFeedback} />
               </div>
             )}
 
