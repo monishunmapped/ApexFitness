@@ -1,13 +1,9 @@
-import React from 'react';
-
 interface ApexLogoProps {
   size?: number;
   className?: string;
-  showText?: boolean;
 }
 
-export function ApexLogo({ size = 120, className = '', showText = true }: ApexLogoProps) {
-  // Calculates the 12 stars positions around the ring (radius = 90px on a 200x200 canvas)
+export function ApexLogo({ size = 120, className = '' }: ApexLogoProps) {
   const stars = Array.from({ length: 12 }).map((_, index) => {
     const angle = (index * 30 * Math.PI) / 180;
     const cx = 100 + 82 * Math.sin(angle);

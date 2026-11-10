@@ -10,13 +10,9 @@ import {
   HeartHandshake, 
   MessageSquare, 
   Star, 
-  User, 
   CheckCircle, 
   ShieldAlert, 
-  Flame, 
-  HelpCircle,
   Sparkles,
-  Users,
   Search,
   X
 } from 'lucide-react';

@@ -13,7 +13,6 @@ import {
   Clock,
   Database,
   Megaphone,
-  Sparkles,
   ShieldAlert as AlertIcon,
   HelpCircle,
   RefreshCw,
@@ -23,8 +22,7 @@ import {
   Save,
   Eye,
   EyeOff,
-  Star,
-  Check
+  Star
 } from 'lucide-react';
 import { Member, CheckIn, WelcomeMessage, SecurityConfig, Feedback } from '../types';
 

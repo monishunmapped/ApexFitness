@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Member, MembershipPlan } from '../types';
 import { generateQrSvg } from '../utils/qrGenerator';
-import { parseDate, formatDateDDMMYYYY } from '../utils/dateUtils';
+import { parseDate, formatDateDDMMYYYY, calculateExpiryDate, todayISO } from '../utils/dateUtils';
 import { ApexLogo } from './ApexLogo';
 import { 
   X, 
-  Plus, 
   Trash2, 
   Printer, 
   Send, 
@@ -14,10 +13,8 @@ import {
   FileText, 
   PlusCircle, 
   Mail, 
-  Smartphone,
   CheckCircle2,
   Building,
-  DollarSign,
   Briefcase,
   Upload
 } from 'lucide-react';
@@ -139,13 +136,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
       try {
         const parsed = JSON.parse(saved);
         if (parsed) {
-          if (parsed.ownerUpiId === 'ironpulse@ybl' || !parsed.ownerUpiId || parsed.ownerUpiId === 'monishahmad25@axl' || parsed.ownerUpiId === 'ashimrule-1@okaxis' || parsed.ownerUpiName === 'Ashu Fitness Trainer' || parsed.gymName?.includes('Ashu')) {
-            parsed.ownerUpiId = 'apexfitness@okaxis';
-            parsed.ownerUpiName = 'Apex Fitness Studio';
-            parsed.gymName = 'APEX FITNESS STUDIO';
-            parsed.gymEmail = 'billing@apexfitness.com';
-            parsed.notes = 'Thank you for investing in your health and strength with Apex Fitness!';
-          }
           return {
             qrMode: 'dynamic',
             customQrUrl: '',
@@ -161,7 +151,7 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
       gymAddress: '742 Gym Avenue, Suite 100, Metropolis',
       gymPhone: '+1 (555) 302-4911',
       gymEmail: 'billing@apexfitness.com',
-      ownerUpiId: 'apexfitness@okaxis',
+      ownerUpiId: '',
       ownerUpiName: 'Apex Fitness Studio',
       taxRate: 5,
       notes: 'Thank you for investing in your health and strength with Apex Fitness!',
@@ -177,9 +167,7 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
 
   // Unique invoice number generation based on date and member ID
   const defaultInvoiceNo = useMemo(() => {
-    const todayStr = new Date().toISOString().slice(0, 10).replace(/[^0-9]/g, '');
-    const rand = Math.floor(100 + Math.random() * 900);
-    return `INV-${todayStr}-${member.id}-${rand}`;
+    return `INV-${todayISO().replace(/-/g, '')}-${member.id}-${Math.floor(100 + Math.random() * 900)}`;
   }, [member]);
 
   // Generate initial line items based on member's plan
@@ -208,12 +196,8 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
 
   // Invoice form state
   const [invoiceNo, setInvoiceNo] = useState(defaultInvoiceNo);
-  const [issueDate, setIssueDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [dueDate, setDueDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 3);
-    return d.toISOString().split('T')[0];
-  });
+  const [issueDate, setIssueDate] = useState(todayISO);
+  const [dueDate, setDueDate] = useState(() => calculateExpiryDate(todayISO(), 3).expiryDateIso);
 
   const [lineItems, setLineItems] = useState<InvoiceLineItem[]>(initialLineItems);
   const [taxRate, setTaxRate] = useState<number>(gymProfile.taxRate);
@@ -240,7 +224,7 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
   const totals = useMemo(() => {
     const subtotal = lineItems.reduce((acc, item) => acc + (item.qty * item.unitPrice), 0);
     const taxAmount = parseFloat(((subtotal * taxRate) / 100).toFixed(2));
-    const total = parseFloat((subtotal + taxAmount - discount).toFixed(2));
+    const total = Math.max(0, parseFloat((subtotal + taxAmount - discount).toFixed(2)));
     return { subtotal, taxAmount, total };
   }, [lineItems, taxRate, discount]);
 
@@ -279,15 +263,11 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
     return numberToWords(totals.total);
   }, [totals.total]);
 
-  const invoiceTime = useMemo(() => {
-    const d = new Date();
-    return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  }, [issueDate]);
-
   // Generate Payment Link for the QR Code
   // A dynamic custom scan UPI payment string or standard URL
   const paymentLink = useMemo(() => {
-    const cleanUpi = upiId.trim() || 'apexfitness@okaxis';
+    const cleanUpi = upiId.trim();
+    if (!cleanUpi) return '';
     const amountStr = totals.total.toFixed(2);
     const currencyCode = currency === '₹' ? 'INR' : currency === '€' ? 'EUR' : 'USD';
     const cleanNo = encodeURIComponent(invoiceNo);
@@ -312,13 +292,14 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
 
     // Standard high-fidelity UPI payment gateway URI
     const cleanName = encodeURIComponent(upiName.trim() || 'Apex Fitness Studio');
-    return `upi://pay?pa=${cleanUpi}&pn=${cleanName}&am=${amountStr}&cu=${currencyCode}&tn=Invoice%20${cleanNo}&mode=02`;
+    return `upi://pay?pa=${encodeURIComponent(cleanUpi)}&pn=${cleanName}&am=${amountStr}&cu=${currencyCode}&tn=Invoice%20${cleanNo}&mode=02`;
   }, [upiId, upiName, totals.total, currency, invoiceNo]);
 
   // Generate SVG representation of the QR code path
-  const paymentQrSvg = useMemo(() => {
-    return generateQrSvg(paymentLink, 180);
-  }, [paymentLink]);
+  const paymentQrSvg = useMemo(
+    () => (paymentLink ? generateQrSvg(paymentLink, 180) : '<p style="font-size:9px;text-align:center;padding:4px">Set your UPI ID in Settings</p>'),
+    [paymentLink]
+  );
 
   // Save settings handler
   const handleSaveSettings = () => {
@@ -684,7 +665,7 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
                   {/* Left: Logo & Address */}
                   <div className="flex items-start gap-4">
                     <div className="shrink-0 p-1 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-center">
-                      <ApexLogo size={64} showText={false} />
+                      <ApexLogo size={64} />
                     </div>
                     <div>
                       <h1 className="font-extrabold text-slate-900 leading-tight uppercase" style={{ fontSize: '28px' }}>
@@ -823,7 +804,7 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
                       {qrMode === 'custom' && customQrUrl ? (
                         <img src={customQrUrl} alt="Custom Payment QR" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                       ) : (
-                        <div dangerouslySetInnerHTML={{ __html: generateQrSvg(paymentLink, 72) }} className="w-full h-full text-slate-950" />
+                        <div dangerouslySetInnerHTML={{ __html: paymentQrSvg }} className="w-full h-full text-slate-950" />
                       )}
                     </div>
                     <div className="text-left flex flex-col justify-center text-slate-600" style={{ fontSize: '11px' }}>

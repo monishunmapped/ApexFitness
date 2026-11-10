@@ -5,8 +5,9 @@
 
 import React, { useMemo, useState } from 'react';
 import { Member, CheckIn, MembershipPlanName, MembershipPlan } from '../types';
-import { INITIAL_MEMBERS } from '../data/initialData';
-import { calculateDaysRemaining, calculateExpiryDate, formatDateDDMMYYYY } from '../utils/dateUtils';
+import { calculateDaysRemaining, calculateExpiryDate, formatDateISO, todayISO } from '../utils/dateUtils';
+import { downloadCsv, fileToDataUrl, parseDobCode, whatsappUrl } from '../utils/common';
+import { LiveClock } from './LiveClock';
 import { ApexLogo } from './ApexLogo';
 
 import { 
@@ -32,7 +33,6 @@ import {
   UserCheck, 
   AlertTriangle,
   Clock,
-  QrCode,
   MessageSquare,
   BarChart2,
   UserPlus,
@@ -43,7 +43,6 @@ import {
   RefreshCw,
   Upload,
   Target,
-  Download,
   FileSpreadsheet,
   ChevronDown,
   Printer,
@@ -57,16 +56,10 @@ import {
   Search,
   Calendar,
   Sparkles,
-  Heart,
-  Smile,
-  ExternalLink,
   Edit3,
   X,
   Phone,
-  Mail,
-  Smartphone,
-  Sun,
-  Moon
+  Mail
 } from 'lucide-react';
 
 const PLAN_COLORS_PALETTE = ['#4f46e5', '#0ea5e9', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'];
@@ -96,10 +89,7 @@ export function Dashboard({
   currency,
   onUpdateCurrency
 }: DashboardProps) {
-  // Current Date anchor for calculation: 2026-06-20
-  const TODAY_STR = '2026-06-20';
-
-  const [liveTime, setLiveTime] = useState<Date>(new Date());
+  const TODAY_STR = todayISO();
 
   // Dashboard Sub-View Tab State ('overview' | 'birthdays')
   const [activeDashboardTab, setActiveDashboardTab] = useState<'overview' | 'birthdays'>('overview');
@@ -136,7 +126,7 @@ export function Dashboard({
   const [volumeChartType, setVolumeChartType] = useState<'bar' | 'area'>('bar');
 
   // Birthday calculation helper
-  const getDaysUntilBirthdayInfo = (dobStr?: string, notes?: string, refDate: Date = new Date('2026-06-20')) => {
+  const getDaysUntilBirthdayInfo = (dobStr?: string, notes?: string, refDate: Date = new Date()) => {
     let dobVal = dobStr;
 
     if (!dobVal && notes) {
@@ -190,7 +180,7 @@ export function Dashboard({
 
   // Calculate list of members celebrating birthdays in the next 7 days
   const birthdayMembersList = useMemo(() => {
-    const refDate = new Date(TODAY_STR);
+    const refDate = new Date();
     const results: {
       member: Member;
       daysLeft: number;
@@ -252,12 +242,9 @@ export function Dashboard({
     if (!greetingModalData) return;
 
     const { member } = greetingModalData;
-    const cleanPhone = member.phone.replace(/[^0-9]/g, '');
 
     if (greetingChannel === 'whatsapp') {
-      const waPhone = cleanPhone.length === 10 ? `1${cleanPhone}` : cleanPhone;
-      const url = `https://wa.me/${waPhone}?text=${encodeURIComponent(customGreetingMessage)}`;
-      window.open(url, '_blank');
+      window.open(whatsappUrl(member.phone, customGreetingMessage), '_blank');
     } else if (greetingChannel === 'email') {
       const mailtoUrl = `mailto:${member.email}?subject=${encodeURIComponent('Happy Birthday from Apex Fitness!')}&body=${encodeURIComponent(customGreetingMessage)}`;
       window.open(mailtoUrl, '_blank');
@@ -280,114 +267,46 @@ export function Dashboard({
     }
   };
 
-  // Helper utility to download compiled CSV string in client browser
-  const downloadCSVfile = (csvContent: string, fileName: string) => {
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', fileName);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   const handleExportMembersCSV = () => {
-    const headers = [
-      'Member ID/DOB',
-      'Name',
-      'Email',
-      'Phone',
-      'Membership Status',
-      'Plan Type',
-      'Gender',
-      'Join Date',
-      'Expiry Date',
-      'Total Check-Ins',
-      'Special Notes'
-    ];
-
-    const rows = members.map(m => [
-      `"${m.id}"`,
-      `"${m.name.replace(/"/g, '""')}"`,
-      `"${m.email.replace(/"/g, '""')}"`,
-      `"${m.phone.replace(/"/g, '""')}"`,
-      `"${m.status}"`,
-      `"${m.plan}"`,
-      `"${m.gender || 'Not Specified'}"`,
-      `"${m.joinDate}"`,
-      `"${m.expiryDate}"`,
-      m.totalCheckIns || 0,
-      `"${(m.notes || '').replace(/"/g, '""').replace(/\r?\n/g, ' ')}"`
+    downloadCsv(`ApexGym_Members_List_${TODAY_STR}.csv`, [
+      ['Member ID/DOB', 'Name', 'Email', 'Phone', 'Membership Status', 'Plan Type', 'Gender', 'Join Date', 'Expiry Date', 'Total Check-Ins', 'Special Notes'],
+      ...members.map(m => [m.id, m.name, m.email, m.phone, m.status, m.plan, m.gender || 'Not Specified', m.joinDate, m.expiryDate, m.totalCheckIns || 0, m.notes]),
     ]);
-
-    const csvContent = '\ufeff' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    downloadCSVfile(csvContent, `ApexGym_Members_List_${new Date().toISOString().split('T')[0]}.csv`);
     setIsExportDropdownOpen(false);
   };
 
   const handleExportCheckInsCSV = () => {
-    const headers = [
-      'Check-In ID',
-      'Member ID/DOB',
-      'Member Name',
-      'Timestamp',
-      'Plan Type',
-      'Check-In Method',
-      'Status'
-    ];
-
-    const rows = checkIns.map(c => [
-      `"${c.id}"`,
-      `"${c.memberId}"`,
-      `"${c.memberName.replace(/"/g, '""')}"`,
-      `"${c.timestamp}"`,
-      `"${c.planType || 'None'}"`,
-      `"${c.method || 'Self QR Scan'}"`,
-      `"${c.status || 'Granted'}"`
+    downloadCsv(`ApexGym_CheckIn_Logs_${TODAY_STR}.csv`, [
+      ['Check-In ID', 'Member ID/DOB', 'Member Name', 'Timestamp', 'Plan Type', 'Check-In Method', 'Status'],
+      ...checkIns.map(c => [c.id, c.memberId, c.memberName, c.timestamp, c.planType || 'None', c.method, c.status]),
     ]);
-
-    const csvContent = '\ufeff' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    downloadCSVfile(csvContent, `ApexGym_CheckIn_Logs_${new Date().toISOString().split('T')[0]}.csv`);
     setIsExportDropdownOpen(false);
   };
 
   const handleExportExecutiveSummaryCSV = () => {
-    const reportDate = new Date().toISOString().split('T')[0];
     const activePct = totalMembers > 0 ? ((activeMembersCount / totalMembers) * 100).toFixed(1) : '0';
-    
-    let csvString = '';
-    csvString += 'APEX FITNESS PLATFORM - EXECUTIVE GYM OPERATIONS REPORT\n';
-    csvString += `Generated Date, ${reportDate}\n`;
-    csvString += 'Current Target Environment, Standard Production Workspace\n';
-    csvString += '\n';
-    
-    csvString += 'SECTION 1: OPERATIONAL KPI SCORECARD\n';
-    csvString += 'Metric, Value, Details\n';
-    csvString += `Total Registered Members, ${totalMembers}, Cumulative membership profiles in dataset\n`;
-    csvString += `Active Members, ${activeMembersCount}, (${activePct}% active subscription rate)\n`;
-    csvString += `Paused Members, ${pausedMembersCount}, Voluntary paused memberships\n`;
-    csvString += `Expired Members, ${expiredMembersCount}, Past-due renewal actions required\n`;
-    csvString += `Estimated Monthly Revenue, "${currency}${estimatedRevenue}", Calculated off active plan rates\n`;
-    csvString += `Today's Entry Goal, ${dailyCheckInGoal}, Targeted check-in count\n`;
-    csvString += `Today's Completed Entries, ${todayCheckIns.length}, (${((todayCheckIns.length / dailyCheckInGoal) * 100).toFixed(1)}% of checklist target met)\n`;
-    csvString += '\n';
-
-    csvString += 'SECTION 2: SUBSCRIPTION PLANS ENGAGEMENT DEVIATION\n';
-    csvString += 'Plan Name, Active Members Count, Monthly Revenue share\n';
-    planRevenueData.forEach(p => {
-      csvString += `"${p.name}", ${p.memberCount}, "${currency}${p.value}"\n`;
-    });
-    csvString += '\n';
-
-    csvString += 'SECTION 3: HISTORICAL ACTIVITY PROFILE BY HOUR\n';
-    csvString += 'Hour, Scanned Logs Count\n';
-    peakHoursData.forEach(pt => {
-      csvString += `"${pt.label}", ${pt.count}\n`;
-    });
-    
-    const csvContent = '\ufeff' + csvString;
-    downloadCSVfile(csvContent, `ApexGym_Executive_Operations_Report_${reportDate}.csv`);
+    downloadCsv(`ApexGym_Executive_Operations_Report_${TODAY_STR}.csv`, [
+      ['APEX FITNESS PLATFORM - EXECUTIVE GYM OPERATIONS REPORT'],
+      ['Generated Date', TODAY_STR],
+      [],
+      ['SECTION 1: OPERATIONAL KPI SCORECARD'],
+      ['Metric', 'Value', 'Details'],
+      ['Total Registered Members', totalMembers, 'Cumulative membership profiles in dataset'],
+      ['Active Members', activeMembersCount, `(${activePct}% active subscription rate)`],
+      ['Paused Members', pausedMembersCount, 'Voluntary paused memberships'],
+      ['Expired Members', expiredMembersCount, 'Past-due renewal actions required'],
+      ['Estimated Monthly Revenue', `${currency}${estimatedRevenue}`, 'Calculated off active plan rates'],
+      ["Today's Entry Goal", dailyCheckInGoal, 'Targeted check-in count'],
+      ["Today's Completed Entries", todayCheckIns.length, `(${((todayCheckIns.length / dailyCheckInGoal) * 100).toFixed(1)}% of checklist target met)`],
+      [],
+      ['SECTION 2: SUBSCRIPTION PLANS ENGAGEMENT DEVIATION'],
+      ['Plan Name', 'Active Members Count', 'Monthly Revenue share'],
+      ...planRevenueData.map(p => [p.name, p.memberCount, `${currency}${p.value}`]),
+      [],
+      ['SECTION 3: HISTORICAL ACTIVITY PROFILE BY HOUR'],
+      ['Hour', 'Scanned Logs Count'],
+      ...peakHoursData.map(pt => [pt.label, pt.count]),
+    ]);
     setIsExportDropdownOpen(false);
   };
 
@@ -399,13 +318,6 @@ export function Dashboard({
     setIsEditingGoal(false);
   };
 
-  React.useEffect(() => {
-    const timer = setInterval(() => {
-      setLiveTime(new Date());
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
   // 1. Calculations for KPIs
   const totalMembers = members.length;
   const activeMembersCount = useMemo(() => members.filter(m => m.status === 'Active').length, [members]);
@@ -415,28 +327,11 @@ export function Dashboard({
   const activeRate = totalMembers > 0 ? Math.round((activeMembersCount / totalMembers) * 100) : 0;
 
   // Today's Check-ins
-  const todayCheckIns = useMemo(() => {
-    return checkIns.filter(ci => ci.timestamp.startsWith(TODAY_STR));
-  }, [checkIns]);
+  const todayCheckIns = useMemo(() => checkIns.filter(ci => formatDateISO(ci.timestamp) === TODAY_STR), [checkIns, TODAY_STR]);
 
   // Desk vs QR check-ins
   const qrCheckInCount = useMemo(() => todayCheckIns.filter(ci => ci.method === 'Self QR Scan').length, [todayCheckIns]);
   const manualCheckInCount = useMemo(() => todayCheckIns.filter(ci => ci.method !== 'Self QR Scan').length, [todayCheckIns]);
-
-  // Compute estimated monthly revenue based on subscription prices:
-  const estimatedRevenue = useMemo(() => {
-    let revenue = 0;
-    members.forEach(m => {
-      if (m.status === 'Active') {
-        const planObj = plans.find(p => p.name === m.plan);
-        if (planObj) {
-          const monthlyContribution = planObj.durationDays > 0 ? (planObj.price * 30 / planObj.durationDays) : 0;
-          revenue += monthlyContribution;
-        }
-      }
-    });
-    return Math.round(revenue);
-  }, [members, plans]);
 
   // Monthly Revenue breakdown based on subscription plans
   const planRevenueData = useMemo(() => {
@@ -466,42 +361,24 @@ export function Dashboard({
       }
     });
 
-    // Convert to rounded layout array and filter out plans with no value if you want, but showing all is better!
     return Object.values(dataMap).map(item => ({
       ...item,
       value: Math.round(item.value)
     }));
   }, [members, plans]);
 
-  // Chart data calculation: last 7 days check-ins (June 14 - June 20, 2026)
+  const estimatedRevenue = useMemo(() => planRevenueData.reduce((sum, p) => sum + p.value, 0), [planRevenueData]);
+
   const chartData = useMemo(() => {
-    const dates = [
-      { label: 'Sun 14', full: '2026-06-14', count: 4, labelShort: 'Sun 14', qrCount: 3, deskCount: 1 },
-      { label: 'Mon 15', full: '2026-06-15', count: 12, labelShort: 'Mon 15', qrCount: 8, deskCount: 4 },
-      { label: 'Tue 16', full: '2026-06-16', count: 15, labelShort: 'Tue 16', qrCount: 10, deskCount: 5 },
-      { label: 'Wed 17', full: '2026-06-17', count: 9, labelShort: 'Wed 17', qrCount: 6, deskCount: 3 },
-      { label: 'Thu 18', full: '2026-06-18', count: 14, labelShort: 'Thu 18', qrCount: 9, deskCount: 5 },
-      { label: 'Fri 19', full: '2026-06-19', count: 18, labelShort: 'Fri 19', qrCount: 12, deskCount: 6 },
-      { label: 'Sat 20 (Today)', full: '2026-06-20', count: 0, labelShort: 'Sat 20 (Today)', qrCount: 0, deskCount: 0 },
-    ];
-
-    // Compute dynamically from actual checkIns
-    dates.forEach((d, idx) => {
-      const dayLogs = checkIns.filter(ci => ci.timestamp.startsWith(d.full));
-      if (dayLogs.length > 0) {
-        d.count = dayLogs.length;
-        d.qrCount = dayLogs.filter(ci => ci.method === 'Self QR Scan').length;
-        d.deskCount = dayLogs.filter(ci => ci.method !== 'Self QR Scan').length;
-      } else if (idx === 6) {
-        // Today
-        const todayLogs = checkIns.filter(ci => ci.timestamp.startsWith(TODAY_STR));
-        d.count = todayLogs.length;
-        d.qrCount = todayLogs.filter(ci => ci.method === 'Self QR Scan').length;
-        d.deskCount = todayLogs.filter(ci => ci.method !== 'Self QR Scan').length;
-      }
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (6 - i));
+      const full = formatDateISO(d);
+      const dayLogs = checkIns.filter(ci => formatDateISO(ci.timestamp) === full);
+      const label = `${d.toLocaleDateString('en-US', { weekday: 'short' })} ${d.getDate()}${i === 6 ? ' (Today)' : ''}`;
+      const qrCount = dayLogs.filter(ci => ci.method === 'Self QR Scan').length;
+      return { label, labelShort: label, full, count: dayLogs.length, qrCount, deskCount: dayLogs.length - qrCount };
     });
-
-    return dates;
   }, [checkIns]);
 
   const total7DayVolume = useMemo(() => chartData.reduce((sum, d) => sum + d.count, 0), [chartData]);
@@ -514,49 +391,14 @@ export function Dashboard({
   const criticalRemindersCount = useMemo(() => {
     return members.filter(m => {
       if (m.status !== 'Active') return false;
-      const diffDays = calculateDaysRemaining(m.expiryDate, '2026-06-20');
+      const diffDays = calculateDaysRemaining(m.expiryDate);
       return diffDays === 5;
     }).length;
   }, [members]);
 
-  // Helper to extract member's birthdate from notes or ID (DDMMYY)
   const getMemberAge = (member: Member): number | null => {
-    // Try matching notes first like: "DOB: 15/01/1988."
-    if (member.notes) {
-      const dobMatch = member.notes.match(/DOB:\s*(\d{2})\/(\d{2})\/(\d{4})/i);
-      if (dobMatch) {
-        const day = parseInt(dobMatch[1], 10);
-        const month = parseInt(dobMatch[2], 10);
-        const year = parseInt(dobMatch[3], 10);
-        return calculateAge(year, month, day);
-      }
-    }
-
-    // Try fallback to standard 6-digit ID parsing (DDMMYY)
-    if (member.id && /^\d{6}$/.test(member.id)) {
-      const day = parseInt(member.id.substring(0, 2), 10);
-      const month = parseInt(member.id.substring(2, 4), 10);
-      const yy = parseInt(member.id.substring(4, 6), 10);
-      const year = yy > 26 ? 1900 + yy : 2000 + yy;
-      if (day >= 1 && day <= 31 && month >= 1 && month <= 12) {
-        return calculateAge(year, month, day);
-      }
-    }
-
-    return null;
-  };
-
-  const calculateAge = (birthYear: number, birthMonth: number, birthDay: number): number => {
-    // Systems Local current date anchor
-    const currentYear = 2026;
-    const currentMonth = 6;
-    const currentDay = 20;
-
-    let age = currentYear - birthYear;
-    if (currentMonth < birthMonth || (currentMonth === birthMonth && currentDay < birthDay)) {
-      age--;
-    }
-    return age;
+    const info = getDaysUntilBirthdayInfo(member.dob, member.notes) || getDaysUntilBirthdayInfo(parseDobCode(member.id)?.dob);
+    return info ? (info.daysLeft === 0 ? info.turningAge : info.turningAge - 1) : null;
   };
 
   // Age demographics chart calculation
@@ -628,13 +470,7 @@ export function Dashboard({
   }, [members]);
 
   // Peak entrance hour helper
-  const getCheckInHour = (timestampString: string): number => {
-    const match = timestampString.match(/T(\d{2}):/);
-    if (match) {
-      return parseInt(match[1], 10);
-    }
-    return new Date(timestampString).getHours();
-  };
+  const getCheckInHour = (timestampString: string) => new Date(timestampString).getHours();
 
   const hourFormat = (h: number): string => {
     if (h === 12) return '12 PM';
@@ -646,59 +482,7 @@ export function Dashboard({
   const [heatmapTab, setHeatmapTab] = useState<'heatmap' | 'chart'>('heatmap');
   const [hoveredCell, setHoveredCell] = useState<{ dayName: string; hourLabel: string; count: number } | null>(null);
 
-  // Combine real check-ins with nice aesthetic simulated entries if checkIns is empty or low
-  const displayCheckIns = useMemo(() => {
-    if (checkIns.length > 15) {
-      return checkIns;
-    }
-    // Blend beautifully structured, simulated historical entry data for a lush, rich heatmap.
-    // This allows showing peaks around 8 AM and 6 PM!
-    const mockFeed: CheckIn[] = [];
-    const membersList = members.length > 0 ? members : INITIAL_MEMBERS;
-    
-    // Seed entries distributed to simulate clear hourly peaks (7-9 AM, and 5-8 PM)
-    const seedDays = 21; // Past 3 operating weeks
-    const dayTrafficWeights = [1.2, 1.3, 1.1, 0.9, 0.8, 0.6, 0.5]; // Mon, Tue, Wed, Thu, Fri, Sat, Sun
-    
-    for (let dayOffset = 0; dayOffset < seedDays; dayOffset++) {
-      const checkinDate = new Date();
-      checkinDate.setDate(checkinDate.getDate() - dayOffset);
-      const jsDay = checkinDate.getDay();
-      const monSunIdx = jsDay === 0 ? 6 : jsDay - 1;
-      const weight = dayTrafficWeights[monSunIdx];
-      
-      // Seed several check-ins per day depending on day weight
-      const checkinCount = Math.floor((3 + Math.random() * 5) * weight);
-      
-      for (let j = 0; j < checkinCount; j++) {
-        const member = membersList[Math.floor(Math.random() * membersList.length)] || INITIAL_MEMBERS[0];
-        const rand = Math.random();
-        let hr = 12;
-        if (rand < 0.45) { // Evening Peak
-          hr = [17, 18, 19, 20][Math.floor(Math.random() * 4)];
-        } else if (rand < 0.75) { // Morning Peak
-          hr = [7, 8, 9][Math.floor(Math.random() * 3)];
-        } else { // Off peak
-          hr = [6, 10, 11, 12, 13, 14, 15, 16, 21][Math.floor(Math.random() * 9)];
-        }
-        
-        const randomMinute = Math.floor(Math.random() * 60);
-        checkinDate.setHours(hr, randomMinute, 0);
-        
-        mockFeed.push({
-          id: `CI-SIMUL-${dayOffset}-${j}`,
-          memberId: member.id,
-          memberName: member.name,
-          timestamp: checkinDate.toISOString(),
-          planType: member.plan,
-          method: 'Self QR Scan',
-          status: 'Granted'
-        });
-      }
-    }
-    
-    return [...checkIns, ...mockFeed];
-  }, [checkIns, members]);
+  const displayCheckIns = checkIns;
 
   // Compute heatmap grid (7 rows representing Mon-Sun, 16 columns representing 6AM-9PM)
   const heatmapGrid = useMemo(() => {
@@ -860,13 +644,7 @@ export function Dashboard({
 
   const handleQuickFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setQuickCapturedPhoto(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
+    if (file) fileToDataUrl(file).then(setQuickCapturedPhoto);
   };
 
   React.useEffect(() => {
@@ -952,25 +730,25 @@ export function Dashboard({
       return;
     }
 
-    const cleanDob = quickDob.trim();
-    if (cleanDob.length !== 4 && cleanDob.length !== 6 && cleanDob.length !== 8) {
-      setEnrollFeedback({ success: false, message: 'DOB/PIN must be 4 digits (DDMM), 6 digits (DDMMYY), or 8 digits (DDMMYYYY).' });
+    const parsedDob = parseDobCode(quickDob);
+    if (!parsedDob) {
+      setEnrollFeedback({ success: false, message: 'DOB/PIN must be a valid date: 4 digits (DDMM), 6 digits (DDMMYY), or 8 digits (DDMMYYYY).' });
       return;
     }
 
-    const isDuplicate = members.some(m => m.id === quickDob.trim());
-    if (isDuplicate) {
-      setEnrollFeedback({ success: false, message: `A member with ID/DOB "${quickDob.trim()}" already exists.` });
+    if (members.some(m => m.id === parsedDob.id)) {
+      setEnrollFeedback({ success: false, message: `A member with ID/DOB "${parsedDob.id}" already exists.` });
       return;
     }
 
-    const planObj = plans.find(p => p.name === quickPlan) || plans[1];
-    const joinDate = '2026-06-20';
-    const { expiryDateIso } = calculateExpiryDate(joinDate, planObj.durationDays);
+    const planObj = plans.find(p => p.name === quickPlan) || plans[0];
+    const joinDate = TODAY_STR;
+    const { expiryDateIso } = calculateExpiryDate(joinDate, planObj?.durationDays ?? 30);
 
     if (onAddMember) {
       onAddMember({
-        id: quickDob.trim(),
+        id: parsedDob.id,
+        dob: parsedDob.dob,
         name: quickName.trim(),
         email: quickEmail.trim(),
         phone: quickPhone.trim(),
@@ -982,10 +760,10 @@ export function Dashboard({
         photoUrl: quickCapturedPhoto || undefined,
         joinDate,
         expiryDate: expiryDateIso,
-        notes: `Quick enrolled. Shift: ${quickShift}. DOB: ${quickDob.slice(0, 2)}/${quickDob.slice(2, 4)}/19${quickDob.slice(4)}`
+        notes: `Quick enrolled. Shift: ${quickShift}.`
       });
 
-      setEnrollFeedback({ success: true, message: `Successfully enrolled ${quickName.trim()} (${quickShift} Shift) with ID: ${quickDob.trim()}!` });
+      setEnrollFeedback({ success: true, message: `Successfully enrolled ${quickName.trim()} (${quickShift} Shift) with ID: ${parsedDob.id}!` });
       
       // Reset fields
       setQuickName('');
@@ -1038,7 +816,7 @@ export function Dashboard({
             {/* Embedded Live Clock */}
             <span className="text-xs font-mono font-extrabold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-100 flex items-center gap-1.5 shrink-0 select-none">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span>LIVE: {liveTime.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })} • {liveTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+              <span>LIVE: <LiveClock render={now => `${now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })} • ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`} /></span>
             </span>
           </h1>
           <p className="text-sm text-slate-500 font-sans mt-1">
@@ -1297,7 +1075,7 @@ export function Dashboard({
 
         <div className="text-xs text-slate-500 font-medium px-2 flex items-center gap-2">
           <Calendar className="w-3.5 h-3.5 text-indigo-500" />
-          <span>System Anchor Date: <strong className="font-mono text-slate-800 dark:text-slate-200">June 20, 2026</strong></span>
+          <span>System Anchor Date: <strong className="font-mono text-slate-800 dark:text-slate-200">{new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</strong></span>
         </div>
       </div>
 
@@ -2063,7 +1841,7 @@ export function Dashboard({
                       radius={[8, 8, 0, 0]}
                       maxBarSize={42}
                     >
-                      {chartData.map((entry, index) => (
+                      {chartData.map((_, index) => (
                         <Cell
                           key={`cell-vol-${index}`}
                           fill={index === 6 ? 'url(#barGradientToday)' : 'url(#barGradientRegular)'}
@@ -2143,7 +1921,7 @@ export function Dashboard({
           </div>
 
           <div className="flex flex-wrap justify-between items-center mt-4 pt-3 border-t border-slate-100 text-xs text-slate-400 font-sans">
-            <span className="font-medium">Operating Period: June 14 – June 20, 2026</span>
+            <span className="font-medium">Operating Period: {chartData[0].full} – {chartData[6].full}</span>
             <span className="flex items-center gap-4">
               <span className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-sm bg-indigo-600 inline-block"></span> Standard Day
@@ -2281,7 +2059,10 @@ export function Dashboard({
           <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
             <span>Calculated from {members.length} registered profiles</span>
             <span className="font-mono bg-slate-100 text-slate-700 px-2.5 py-1 rounded-md font-bold">
-              Avg Age: {members.length > 0 ? Math.round(members.reduce((acc, m) => acc + (getMemberAge(m) || 35), 0) / members.length) : 0} Yrs
+              Avg Age: {(() => {
+                const ages = members.map(getMemberAge).filter((a): a is number => a !== null);
+                return ages.length ? Math.round(ages.reduce((acc, a) => acc + a, 0) / ages.length) : 0;
+              })()} Yrs
             </span>
           </div>
         </div>
@@ -2594,7 +2375,7 @@ export function Dashboard({
                       dataKey="value"
                       nameKey="name"
                     >
-                      {planRevenueData.map((entry, index) => (
+                      {planRevenueData.map((_, index) => (
                         <Cell key={`cell-rev-${index}`} fill={PLAN_COLORS_PALETTE[index % PLAN_COLORS_PALETTE.length]} />
                       ))}
                     </Pie>
@@ -2917,10 +2698,7 @@ export function Dashboard({
 
                       <button
                         onClick={() => {
-                          const cleanPhone = member.phone.replace(/[^0-9]/g, '');
-                          const waPhone = cleanPhone.length === 10 ? `1${cleanPhone}` : cleanPhone;
-                          const text = encodeURIComponent(`Happy Birthday ${member.name}! 🎉 Best wishes from Apex Fitness Gym! 🏋️‍♂️`);
-                          window.open(`https://wa.me/${waPhone}?text=${text}`, '_blank');
+                          window.open(whatsappUrl(member.phone, `Happy Birthday ${member.name}! 🎉 Best wishes from Apex Fitness Gym! 🏋️‍♂️`), '_blank');
                           if (onUpdateMember) {
                             onUpdateMember(member.id, { birthdayGreetingSentDate: TODAY_STR });
                           }
@@ -3161,7 +2939,7 @@ export function Dashboard({
                 <div className="flex flex-row justify-between items-start border-b border-slate-200 pb-4 mb-4">
                   <div className="flex items-start gap-3">
                     <div className="shrink-0 p-1 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-center">
-                      <ApexLogo size={52} showText={false} />
+                      <ApexLogo size={52} />
                     </div>
                     <div>
                       {isReportEditMode ? (

@@ -1,10 +1,5 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 export interface Member {
-  id: string; // e.g. "MEM-1001"
+  id: string;
   name: string;
   email: string;
   phone: string;
@@ -19,13 +14,13 @@ export interface Member {
   notes?: string;
   totalCheckIns: number;
   lastCheckIn: string | null;
-  reminderSentDate?: string; // Track when WhatsApp renewal alerts were sent
-  birthdayGreetingSentDate?: string; // Track when birthday greeting was sent
-  dob?: string; // Birthdate YYYY-MM-DD
-  autoRenew?: boolean; // Enable automatic subscription renewal
-  shiftTiming?: 'Morning' | 'Evening'; // Member shift slot (Morning / Evening)
-  advanceBalance?: number; // Total unapplied advance payment balance
-  advancePayments?: AdvancePaymentRecord[]; // List of historical advance payment transactions
+  reminderSentDate?: string;
+  birthdayGreetingSentDate?: string;
+  dob?: string;
+  autoRenew?: boolean;
+  shiftTiming?: 'Morning' | 'Evening';
+  advanceBalance?: number;
+  advancePayments?: AdvancePaymentRecord[];
 }
 
 export interface AdvancePaymentRecord {
@@ -33,7 +28,7 @@ export interface AdvancePaymentRecord {
   amount: number;
   paymentMode: 'Cash' | 'UPI' | 'Credit/Debit Card' | 'Net Banking' | 'Cheque' | 'Bank Transfer';
   purpose: string;
-  date: string; // ISO string
+  date: string;
   referenceNo?: string;
   notes?: string;
   extendedExpiryDate?: string;
@@ -53,28 +48,28 @@ export interface CheckIn {
   id: string;
   memberId: string;
   memberName: string;
-  timestamp: string; // ISO String
+  timestamp: string;
   planType: string;
-  method: 'Self QR Scan' | 'Front Desk Scan' | 'Manual Select';
+  method: 'Self QR Scan' | 'Front Desk Scan' | 'Manual Select' | 'Biometric Fingerprint';
   status: 'Granted' | 'Expired Plan' | 'No Active Plan';
 }
 
 export interface DailyStat {
-  date: string; // "YYYY-MM-DD"
+  date: string;
   checkIns: number;
   newMembers: number;
 }
 
 export interface WelcomeMessage {
-  id: string; // e.g. "MSG-12345"
+  id: string;
   type: 'Welcome' | 'CheckIn';
   memberId: string;
   memberName: string;
   phone: string;
   messageText: string;
-  timestamp: string; // ISO String
-  method?: string; // For CheckIn
-  plan?: string;    // For Welcome/CheckIn
+  timestamp: string;
+  method?: string;
+  plan?: string;
   status: 'Pending' | 'Sent';
 }
 
@@ -90,10 +85,23 @@ export interface Feedback {
   id: string;
   memberName?: string;
   memberEmail?: string;
-  rating: number; // 1 to 5
+  rating: number;
   category: 'Facilities' | 'Equipment' | 'Trainers' | 'Cleanliness' | 'Classes' | 'Other';
   suggestion: string;
-  timestamp: string; // ISO String
+  timestamp: string;
   status: 'Pending' | 'Reviewed' | 'Addressed';
 }
 
+
+export type CheckInMethod = CheckIn['method'];
+
+export interface CheckInResponse {
+  success: boolean;
+  message: string;
+  status: CheckIn['status'];
+}
+
+export interface UserSession {
+  email: string;
+  role: 'Owner' | 'Admin';
+}

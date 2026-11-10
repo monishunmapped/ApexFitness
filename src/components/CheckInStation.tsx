@@ -1,155 +1,62 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import React, { useState, useEffect } from 'react';
-import { Member, CheckIn } from '../types';
+import React, { useState, useRef, useEffect } from 'react';
+import { Member, CheckInMethod, CheckInResponse } from '../types';
 import { generateQrSvg } from '../utils/qrGenerator';
+import { findMemberByCode, playBeep } from '../utils/common';
+import { LiveClock } from './LiveClock';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Scan, 
   Search, 
   CheckCircle, 
   XCircle, 
-  AlertTriangle, 
   Volume2, 
   VolumeX, 
-  UserPlus, 
-  QrCode,
   Sparkles,
   ArrowRight,
   Database,
-  Lock,
-  Compass
+  Lock
 } from 'lucide-react';
 
 interface CheckInStationProps {
   members: Member[];
-  onCheckIn: (memberId: string, method: 'Self QR Scan' | 'Front Desk Scan' | 'Manual Select') => { success: boolean; message: string; status: 'Granted' | 'Expired Plan' | 'No Active Plan' };
-  checkIns: CheckIn[];
+  onCheckIn: (memberId: string, method: CheckInMethod) => CheckInResponse;
 }
 
-export function CheckInStation({ members, onCheckIn, checkIns }: CheckInStationProps) {
+const checkInPortalUrl = `${window.location.origin}${window.location.pathname}?view=portal`;
+
+export function CheckInStation({ members, onCheckIn }: CheckInStationProps) {
   const [memberIdInput, setMemberIdInput] = useState('');
   const [directorySearch, setDirectorySearch] = useState('');
   const [scanResult, setScanResult] = useState<{ success: boolean; message: string; memberName?: string; plan?: string; id?: string; status?: string; photoUrl?: string } | null>(null);
   const [activeAnimation, setActiveAnimation] = useState<'success' | 'fail' | null>(null);
-  const [animatedMemberName, setAnimatedMemberName] = useState<string>('');
+  const [animatedMemberName, setAnimatedMemberName] = useState('');
   const [isMuted, setIsMuted] = useState(false);
-  const [liveTime, setLiveTime] = useState<Date>(new Date());
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setLiveTime(new Date());
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
+  useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
-  // Generate self-scanning URL for QR Code based on current page address
-  const [checkInPortalUrl, setCheckInPortalUrl] = useState('');
-
-  useEffect(() => {
-    const url = `${window.location.origin}${window.location.pathname}?view=portal`;
-    setCheckInPortalUrl(url);
-  }, []);
-
-  // Play audio feedbacks (synthetic beep sound using browser's AudioContext API)
-  const playBeep = (type: 'success' | 'fail') => {
-    if (isMuted) return;
-    try {
-      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const oscillator = audioCtx.createOscillator();
-      const gainNode = audioCtx.createGain();
-      oscillator.connect(gainNode);
-      gainNode.connect(audioCtx.destination);
-
-      if (type === 'success') {
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // High pitch A5
-        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-        oscillator.start();
-        oscillator.stop(audioCtx.currentTime + 0.12);
-      } else {
-        oscillator.type = 'sawtooth';
-        oscillator.frequency.setValueAtTime(150, audioCtx.currentTime); // Low buzz
-        gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
-        oscillator.start();
-        oscillator.stop(audioCtx.currentTime + 0.3);
-      }
-    } catch (e) {
-      console.warn("Web Audio API not supported or suspended by browser:", e);
-    }
-  };
-
-  // Process a member code checkin
-  const triggerCheckIn = (code: string, method: 'Self QR Scan' | 'Front Desk Scan' | 'Manual Select') => {
+  const triggerCheckIn = (code: string, method: CheckInMethod) => {
     const cleanCode = code.trim().toUpperCase();
     if (!cleanCode) return;
 
-    // Find member to display detail summaries by exact ID, 4-digit DDMM Gate PIN, 6-digit DDMMYY, or 8-digit DDMMYYYY DOB
-    const member = members.find(m => {
-      if (m.id.toUpperCase() === cleanCode) return true;
-      if (m.id.length >= 4 && m.id.slice(0, 4).toUpperCase() === cleanCode) return true;
-      if (m.id.length === 8) {
-        const ddmmyy = (m.id.slice(0, 4) + m.id.slice(6, 8)).toUpperCase();
-        if (ddmmyy === cleanCode) return true;
-      }
-      if (m.dob && m.dob.includes('-')) {
-        const parts = m.dob.split('-');
-        if (parts.length === 3) {
-          const [yyyy, mm, dd] = parts;
-          const ddmm = `${dd}${mm}`.toUpperCase();
-          const ddmmyy = `${dd}${mm}${yyyy.slice(-2)}`.toUpperCase();
-          const ddmmyyyy = `${dd}${mm}${yyyy}`.toUpperCase();
-          if (ddmm === cleanCode || ddmmyy === cleanCode || ddmmyyyy === cleanCode) return true;
-        }
-      }
-      return false;
+    const { member } = findMemberByCode(members, cleanCode);
+    const result = onCheckIn(member ? member.id : cleanCode, method);
+    if (!isMuted) playBeep(result.success);
+
+    setScanResult({
+      success: result.success,
+      message: result.message,
+      memberName: member?.name || 'Unknown Badge ID',
+      plan: member?.plan || 'None',
+      id: member?.id || cleanCode,
+      status: member?.status || 'Unregistered',
+      photoUrl: member?.photoUrl,
     });
-
-    const targetId = member ? member.id : cleanCode;
-    const result = onCheckIn(targetId, method);
-
-    if (result.success) {
-       playBeep('success');
-       setScanResult({
-         success: true,
-         message: result.message,
-         memberName: member?.name,
-         plan: member?.plan,
-         id: member?.id,
-         status: member?.status,
-         photoUrl: member?.photoUrl
-       });
-       setAnimatedMemberName(member?.name || 'Authorized Member');
-       setActiveAnimation('success');
-     } else {
-       playBeep('fail');
-       setScanResult({
-         success: false,
-         message: result.message,
-         memberName: member?.name || 'Unknown Badge ID',
-         plan: member?.plan || 'None',
-         id: cleanCode,
-         status: member?.status || 'Unregistered',
-         photoUrl: member?.photoUrl
-       });
-       setAnimatedMemberName(member?.name || 'Access Denied');
-       setActiveAnimation('fail');
-     }
-
+    setAnimatedMemberName(member?.name || (result.success ? 'Authorized Member' : 'Access Denied'));
+    setActiveAnimation(result.success ? 'success' : 'fail');
     setMemberIdInput('');
 
-    // Clear overlay animation after 2.5 seconds automatically
-    setTimeout(() => {
-      setActiveAnimation(null);
-    }, 2500);
-
-    // Clear alert banner after 4.5 seconds automatically
-    setTimeout(() => {
-      setScanResult(prev => prev?.id === cleanCode ? null : prev);
-    }, 4500);
+    timers.current.forEach(clearTimeout);
+    timers.current = [setTimeout(() => setActiveAnimation(null), 2500), setTimeout(() => setScanResult(null), 4500)];
   };
 
   const handleManualSubmit = (e: React.FormEvent) => {
@@ -157,18 +64,9 @@ export function CheckInStation({ members, onCheckIn, checkIns }: CheckInStationP
     triggerCheckIn(memberIdInput, 'Front Desk Scan');
   };
 
-  // Simulate a physical card scan from the list of current members
-  const simulateCardScan = (m: Member) => {
-    triggerCheckIn(m.id, 'Self QR Scan');
-  };
+  const simulateCardScan = (m: Member) => triggerCheckIn(m.id, 'Self QR Scan');
 
-  // Perform quick random checkin simulation for easier preview testing
-  const runRandomSimulation = () => {
-    if (members.length === 0) return;
-    const randomIndex = Math.floor(Math.random() * members.length);
-    const randomMember = members[randomIndex];
-    simulateCardScan(randomMember);
-  };
+  const runRandomSimulation = () => members.length && simulateCardScan(members[Math.floor(Math.random() * members.length)]);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-in text-slate-800" id="checkin-gate-terminal">
@@ -186,10 +84,10 @@ export function CheckInStation({ members, onCheckIn, checkIns }: CheckInStationP
         <div className="bg-slate-900 text-white rounded-2xl px-5 py-2.5 shadow-sm border border-slate-800 text-right shrink-0 select-none">
           <p className="text-[10px] font-mono font-bold text-sky-400 tracking-wider uppercase block text-left sm:text-right">FRONT DESK MONITOR</p>
           <p className="text-sm font-bold font-sans tracking-tight text-slate-200 mt-0.5">
-            {liveTime.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+            <LiveClock render={now => now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })} />
           </p>
           <p className="text-xs font-mono font-extrabold text-sky-450 block mt-0.5">
-            {liveTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
+            <LiveClock render={now => now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })} />
           </p>
         </div>
       </div>

@@ -4,17 +4,13 @@ import {
   Unlock, 
   Key, 
   Check, 
-  CheckCircle, 
   Clock, 
   Trash2, 
   Star, 
   Search, 
   Filter, 
-  Sparkles, 
   AlertCircle, 
-  ThumbsUp, 
-  MessageSquare,
-  ChevronDown
+  MessageSquare
 } from 'lucide-react';
 import { Feedback, SecurityConfig } from '../types';
 
