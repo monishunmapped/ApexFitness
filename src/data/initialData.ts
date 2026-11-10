@@ -1,8 +1,3 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import { Member, CheckIn, MembershipPlan } from '../types';
 
 export const MEMBERSHIP_PLANS: MembershipPlan[] = [

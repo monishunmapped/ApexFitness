@@ -1,8 +1,3 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import React, { useMemo, useState } from 'react';
 import { Member, CheckIn, MembershipPlanName, MembershipPlan } from '../types';
 import { calculateDaysRemaining, calculateExpiryDate, formatDateISO, todayISO } from '../utils/dateUtils';
@@ -91,14 +86,11 @@ export function Dashboard({
 }: DashboardProps) {
   const TODAY_STR = todayISO();
 
-  // Dashboard Sub-View Tab State ('overview' | 'birthdays')
   const [activeDashboardTab, setActiveDashboardTab] = useState<'overview' | 'birthdays'>('overview');
 
-  // Birthday search & filter state
   const [birthdaySearchQuery, setBirthdaySearchQuery] = useState('');
   const [birthdayFilter, setBirthdayFilter] = useState<'all' | 'today' | 'upcoming'>('all');
 
-  // Birthday Greeting Composer Modal State
   const [greetingModalData, setGreetingModalData] = useState<{
     member: Member;
     turningAge: number;
@@ -110,11 +102,9 @@ export function Dashboard({
   const [greetingChannel, setGreetingChannel] = useState<'whatsapp' | 'email' | 'sms'>('whatsapp');
   const [copiedToast, setCopiedToast] = useState(false);
 
-  // Edit DOB Modal State
   const [editDobMember, setEditDobMember] = useState<Member | null>(null);
   const [editDobValue, setEditDobValue] = useState('');
 
-  // User-defined daily check-in goal (default to 15, persisted in localStorage)
   const [dailyCheckInGoal, setDailyCheckInGoal] = useState<number>(() => {
     const saved = localStorage.getItem('gym_daily_checkin_goal');
     return saved ? parseInt(saved, 10) : 15;
@@ -125,7 +115,6 @@ export function Dashboard({
   const [showReportModal, setShowReportModal] = useState<boolean>(false);
   const [volumeChartType, setVolumeChartType] = useState<'bar' | 'area'>('bar');
 
-  // Birthday calculation helper
   const getDaysUntilBirthdayInfo = (dobStr?: string, notes?: string, refDate: Date = new Date()) => {
     let dobVal = dobStr;
 
@@ -178,7 +167,6 @@ export function Dashboard({
     };
   };
 
-  // Calculate list of members celebrating birthdays in the next 7 days
   const birthdayMembersList = useMemo(() => {
     const refDate = new Date();
     const results: {
@@ -318,7 +306,6 @@ export function Dashboard({
     setIsEditingGoal(false);
   };
 
-  // 1. Calculations for KPIs
   const totalMembers = members.length;
   const activeMembersCount = useMemo(() => members.filter(m => m.status === 'Active').length, [members]);
   const pausedMembersCount = useMemo(() => members.filter(m => m.status === 'Paused').length, [members]);
@@ -326,18 +313,14 @@ export function Dashboard({
 
   const activeRate = totalMembers > 0 ? Math.round((activeMembersCount / totalMembers) * 100) : 0;
 
-  // Today's Check-ins
   const todayCheckIns = useMemo(() => checkIns.filter(ci => formatDateISO(ci.timestamp) === TODAY_STR), [checkIns, TODAY_STR]);
 
-  // Desk vs QR check-ins
   const qrCheckInCount = useMemo(() => todayCheckIns.filter(ci => ci.method === 'Self QR Scan').length, [todayCheckIns]);
   const manualCheckInCount = useMemo(() => todayCheckIns.filter(ci => ci.method !== 'Self QR Scan').length, [todayCheckIns]);
 
-  // Monthly Revenue breakdown based on subscription plans
   const planRevenueData = useMemo(() => {
     const dataMap: Record<string, { name: string; value: number; memberCount: number }> = {};
     
-    // Initialize plans with 0 contribution
     plans.forEach(p => {
       dataMap[p.name] = {
         name: p.name,
@@ -346,7 +329,6 @@ export function Dashboard({
       };
     });
 
-    // Sum active contributions
     members.forEach(m => {
       if (m.status === 'Active') {
         const planObj = plans.find(p => p.name === m.plan);
@@ -387,7 +369,6 @@ export function Dashboard({
     return chartData.reduce((max, d) => d.count > max.count ? d : max, chartData[0]);
   }, [chartData]);
 
-  // Calculate active members whose memberships are ending in exactly 5 days
   const criticalRemindersCount = useMemo(() => {
     return members.filter(m => {
       if (m.status !== 'Active') return false;
@@ -401,7 +382,6 @@ export function Dashboard({
     return info ? (info.daysLeft === 0 ? info.turningAge : info.turningAge - 1) : null;
   };
 
-  // Age demographics chart calculation
   const ageDistributionData = useMemo(() => {
     const brackets = [
       { range: 'Under 20', count: 0, fill: '#94a3b8' },
@@ -427,7 +407,6 @@ export function Dashboard({
     return brackets;
   }, [members]);
 
-  // Gender distribution calculation
   const genderDistributionData = useMemo(() => {
     const genders: Record<string, { count: number; fill: string }> = {
       'Male': { count: 0, fill: '#0ea5e9' },
@@ -469,7 +448,6 @@ export function Dashboard({
     return { male, female };
   }, [members]);
 
-  // Peak entrance hour helper
   const getCheckInHour = (timestampString: string) => new Date(timestampString).getHours();
 
   const hourFormat = (h: number): string => {
@@ -478,13 +456,11 @@ export function Dashboard({
     return h > 12 ? `${h - 12} PM` : `${h} AM`;
   };
 
-  // Tab selector and hover status for gym activity heatmap
   const [heatmapTab, setHeatmapTab] = useState<'heatmap' | 'chart'>('heatmap');
   const [hoveredCell, setHoveredCell] = useState<{ dayName: string; hourLabel: string; count: number } | null>(null);
 
   const displayCheckIns = checkIns;
 
-  // Compute heatmap grid (7 rows representing Mon-Sun, 16 columns representing 6AM-9PM)
   const heatmapGrid = useMemo(() => {
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const hours = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]; // 16 hours
@@ -493,7 +469,6 @@ export function Dashboard({
       return jsDay === 0 ? 6 : jsDay - 1;
     };
 
-    // Initialize 7x16 grid
     const grid = days.map((dayName, dIdx) => {
       return hours.map(h => ({
         dayName,
@@ -520,7 +495,6 @@ export function Dashboard({
     return grid;
   }, [displayCheckIns]);
 
-  // Compute peak traffic hours based on all historical checkins in database
   const peakHoursData = useMemo(() => {
     const CORE_HOURS = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22];
     return CORE_HOURS.map(h => {
@@ -559,7 +533,6 @@ export function Dashboard({
     return `Gym peak hour detected at ${peakTimeLabel} - ${nextHourLabel} with ${maxCt} scanned entries.`;
   }, [displayCheckIns]);
 
-  // Quick Member Enrollment State
   const [quickName, setQuickName] = useState('');
   const [quickEmail, setQuickEmail] = useState('');
   const [quickPhone, setQuickPhone] = useState('');
@@ -570,7 +543,6 @@ export function Dashboard({
   const [quickShift, setQuickShift] = useState<'Morning' | 'Evening'>('Morning');
   const [enrollFeedback, setEnrollFeedback] = useState<{ success: boolean; message: string } | null>(null);
 
-  // Editable Report State
   const [reportGymName, setReportGymName] = useState('APEX FITNESS STUDIO');
   const [reportAddress, setReportAddress] = useState('742 Gym Avenue, Suite 100, Metropolis');
   const [reportPhone, setReportPhone] = useState('+1 (555) 302-4911');
@@ -585,7 +557,6 @@ export function Dashboard({
   const [reportSig2, setReportSig2] = useState('Authorized Admin Seal');
   const [isReportEditMode, setIsReportEditMode] = useState(false);
 
-  // Camera & photo states for Quick Member Enrollment
   const [quickCapturedPhoto, setQuickCapturedPhoto] = useState<string>('');
   const [quickIsCameraActive, setQuickIsCameraActive] = useState(false);
   const [quickCameraStream, setQuickCameraStream] = useState<MediaStream | null>(null);
@@ -655,16 +626,13 @@ export function Dashboard({
     };
   }, [quickCameraStream]);
 
-  // Quick Member Revocation State
   const [revokeMemberId, setRevokeMemberId] = useState('');
   const [revokeFeedback, setRevokeFeedback] = useState<{ success: boolean; message: string } | null>(null);
 
-  // Local states for pricing and currency configurator
   const [editedCurrency, setEditedCurrency] = useState(currency);
   const [editedPlans, setEditedPlans] = useState<MembershipPlan[]>(() => plans);
   const [configFeedback, setConfigFeedback] = useState<{ success: boolean; message: string } | null>(null);
 
-  // Keep local editor sync when props change (like resetting database or other tabs modifying them)
   React.useEffect(() => {
     setEditedCurrency(currency);
   }, [currency]);
@@ -701,7 +669,6 @@ export function Dashboard({
       return;
     }
     
-    // Validate prices and durations
     for (const plan of editedPlans) {
       if (plan.price < 0 || isNaN(plan.price)) {
         setConfigFeedback({ success: false, message: `Price for plan "${plan.name}" must be a valid positive number.` });
@@ -713,7 +680,6 @@ export function Dashboard({
       }
     }
 
-    // Call parents
     onUpdateCurrency(editedCurrency.trim());
     onUpdatePlans(editedPlans);
     
@@ -765,7 +731,6 @@ export function Dashboard({
 
       setEnrollFeedback({ success: true, message: `Successfully enrolled ${quickName.trim()} (${quickShift} Shift) with ID: ${parsedDob.id}!` });
       
-      // Reset fields
       setQuickName('');
       setQuickEmail('');
       setQuickPhone('');
@@ -808,12 +773,10 @@ export function Dashboard({
   return (
     <div className="space-y-8 animate-fade-in" id="dashboard-tab">
       
-      {/* Header and Quick Action */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-2">
         <div className="text-left flex-1">
           <h1 className="text-3xl font-sans font-bold tracking-tight text-slate-900 flex items-center gap-3 flex-wrap animate-fade-in" id="dash-title">
             <span>Gym Operations</span>
-            {/* Embedded Live Clock */}
             <span className="text-xs font-mono font-extrabold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-100 flex items-center gap-1.5 shrink-0 select-none">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               <span>LIVE: <LiveClock render={now => `${now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })} • ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`} /></span>
@@ -824,10 +787,8 @@ export function Dashboard({
           </p>
         </div>
 
-        {/* Dynamic Goal tracker & Actions area */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-4 w-full lg:w-auto shrink-0">
           
-          {/* Daily Goal Tracker Widget */}
           <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs flex flex-col min-w-[270px] text-left shrink-0" id="daily-goal-tracker-widget">
             <div className="flex items-center justify-between mb-1.5 gap-2">
               <div className="flex items-center gap-2">
@@ -840,7 +801,6 @@ export function Dashboard({
                 </div>
               </div>
               
-              {/* Interactive Edit / Set Goal Control */}
               {isEditingGoal ? (
                 <div className="flex items-center gap-1" id="goal-editor-controls">
                   <input
@@ -898,7 +858,6 @@ export function Dashboard({
               )}
             </div>
 
-            {/* Progress gauge bar */}
             <div className="space-y-1">
               <div className="flex justify-between items-baseline text-xs font-mono">
                 <span className="text-slate-500 font-semibold font-sans">Progress Today:</span>
@@ -907,7 +866,6 @@ export function Dashboard({
                 </span>
               </div>
               
-              {/* Progress gauge bar */}
               <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden relative">
                 <div 
                   className={`h-full rounded-full transition-all duration-500 ${
@@ -962,7 +920,6 @@ export function Dashboard({
               <span>Generate Report</span>
             </button>
 
-            {/* Premium CSV Export Dropdown Toggle */}
             <div className="relative" id="export-csv-dropdown-container">
               <button
                 onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
@@ -1036,7 +993,6 @@ export function Dashboard({
 
       </div>
 
-      {/* Dashboard View Navigation Tabs */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-slate-900 p-2 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs mb-6">
         <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl w-full sm:w-auto">
           <button
@@ -1081,7 +1037,6 @@ export function Dashboard({
 
       {activeDashboardTab === 'overview' && (
         <div className="space-y-8 animate-fade-in">
-          {/* Upcoming Birthday Alert Widget on Overview */}
           {birthdayMembersList.length > 0 && (
             <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-indigo-500/10 border border-amber-300/60 dark:border-amber-500/30 text-slate-900 dark:text-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-xs select-none mb-6" id="birthday-announcement-widget">
               <div className="flex items-center gap-3 text-left">
@@ -1114,7 +1069,6 @@ export function Dashboard({
             </div>
           )}
 
-          {/* Critical Expiry Alerts Alert Banner */}
       {criticalRemindersCount > 0 && (
         <div className="p-4 rounded-2xl bg-sky-50 border border-sky-300 text-slate-900 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-xs select-none" id="critical-alert-banner">
           <div className="flex items-center gap-3 text-left">
@@ -1139,10 +1093,8 @@ export function Dashboard({
         </div>
       )}
 
-      {/* Grid of Key Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" id="dashboard-metric-cards">
         
-        {/* Active Members */}
         <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm flex items-start justify-between" id="metric-active-members">
           <div className="space-y-2">
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Active Members</p>
@@ -1160,7 +1112,6 @@ export function Dashboard({
           </div>
         </div>
 
-        {/* Daily Check-ins */}
         <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm flex items-start justify-between" id="metric-daily-checkins">
           <div className="space-y-2">
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Today's Check-ins</p>
@@ -1178,7 +1129,6 @@ export function Dashboard({
           </div>
         </div>
 
-        {/* Monthly Revenue Estimate */}
         <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm flex items-start justify-between" id="metric-revenue">
           <div className="space-y-2">
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Monthly MRR Run-rate</p>
@@ -1196,7 +1146,6 @@ export function Dashboard({
           </div>
         </div>
 
-        {/* Membership Status Breakdowns */}
         <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm" id="metric-status-ratios">
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Status Breakdown</p>
           <div className="space-y-2">
@@ -1222,7 +1171,6 @@ export function Dashboard({
         </div>
       </div>
 
-      {/* Quick Add and Remove Member Console */}
       <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm text-left" id="quick-member-operations">
         <div className="flex items-center gap-2 mb-4">
           <Users className="w-5 h-5 text-indigo-600" />
@@ -1232,7 +1180,6 @@ export function Dashboard({
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           
-          {/* Quick Add Form Section */}
           <div className="space-y-4 border-r border-slate-100 pr-0 lg:pr-8 text-left">
             <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400 uppercase tracking-wider">
               <UserPlus className="w-4 h-4 text-emerald-600" />
@@ -1346,9 +1293,7 @@ export function Dashboard({
                 </div>
               </div>
 
-              {/* Quick Profile Snapshot Capture (Webcam & Upload) */}
               <div className="border border-slate-200/60 bg-slate-50/50 rounded-xl p-3 flex items-center gap-4">
-                {/* Visual Avatar frame */}
                 <div className="relative w-14 h-14 rounded-full border-2 border-white shadow-sm bg-slate-200 overflow-hidden flex items-center justify-center shrink-0">
                   {quickCapturedPhoto ? (
                     <img src={quickCapturedPhoto} alt="Snapshot Preview" className="w-full h-full object-cover" />
@@ -1454,7 +1399,6 @@ export function Dashboard({
             </form>
           </div>
 
-          {/* Quick Remove Form Section */}
           <div className="space-y-4 text-left">
             <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400 uppercase tracking-wider">
               <UserX className="w-4 h-4 text-rose-600" />
@@ -1529,7 +1473,6 @@ export function Dashboard({
         </div>
       </div>
 
-      {/* Subscriptions & Currency Configurator Card */}
       <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm text-left" id="subscriptions-control-panel">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
           <div className="flex items-center gap-2">
@@ -1543,7 +1486,6 @@ export function Dashboard({
         <form onSubmit={handleSaveConfigs} className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             
-            {/* Left Hand: Global Currency Selector */}
             <div className="lg:col-span-3 space-y-4 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
               <div className="space-y-1 text-left">
                 <label className="text-xs font-bold text-slate-700 block text-left">Currency Symbol</label>
@@ -1579,7 +1521,6 @@ export function Dashboard({
               </div>
             </div>
 
-            {/* Right Hand: Interactive Editable List of Subscription Plans */}
             <div className="lg:col-span-9 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {editedPlans.map((plan, index) => (
@@ -1687,7 +1628,6 @@ export function Dashboard({
 
           </div>
 
-          {/* Form Actions Section */}
           <div className="border-t border-slate-100 pt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex-1 w-full sm:w-auto text-left">
               {configFeedback && (
@@ -1710,10 +1650,8 @@ export function Dashboard({
         </form>
       </div>
 
-      {/* Main Stats Charts and Logs */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8" id="dashboard-visuals">
         
-        {/* Daily Check-in Volume (Past 7 Days) - Powered by Recharts */}
         <div className="lg:col-span-2 bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm flex flex-col justify-between" id="chart-panel">
           <div>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
@@ -1725,7 +1663,6 @@ export function Dashboard({
                 <p className="text-xs text-slate-500 mt-0.5">Daily member attendance trend across the last 7 operating days</p>
               </div>
 
-              {/* View Toggle (Bar vs Area Trend) */}
               <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200/70 select-none shrink-0 self-start sm:self-center">
                 <button
                   type="button"
@@ -1754,7 +1691,6 @@ export function Dashboard({
               </div>
             </div>
 
-            {/* Quick KPI Stat Chips */}
             <div className="grid grid-cols-3 gap-3 mb-6 bg-slate-50/70 p-3 rounded-xl border border-slate-100">
               <div className="text-left">
                 <span className="text-[10px] font-extrabold uppercase text-slate-400 block tracking-wider">7-Day Total</span>
@@ -1773,7 +1709,6 @@ export function Dashboard({
               </div>
             </div>
 
-            {/* Recharts Container */}
             <div className="h-64 w-full relative min-w-0" id="recharts-7day-volume-container">
               <ResponsiveContainer width="100%" height="100%">
                 {volumeChartType === 'bar' ? (
@@ -1933,7 +1868,6 @@ export function Dashboard({
           </div>
         </div>
 
-        {/* Real-time Status and Activity Feed */}
         <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm flex flex-col justify-between" id="activity-feed">
           <div>
             <div className="flex justify-between items-center mb-1">
@@ -1989,15 +1923,12 @@ export function Dashboard({
             </div>
           </div>
 
-
         </div>
 
       </div>
 
-      {/* Member Demographics, Peak Entry Hours, and Monthly Revenue Analysis Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6" id="dashboard-analytics-bento">
         
-        {/* Card 1: Age Demographics */}
         <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm flex flex-col justify-between w-full min-w-0 overflow-hidden" id="demographics-panel">
           <div>
             <div className="flex items-center gap-2 mb-1">
@@ -2067,7 +1998,6 @@ export function Dashboard({
           </div>
         </div>
 
-        {/* Card 1.5: Gender Demographics */}
         <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm flex flex-col justify-between w-full min-w-0 overflow-hidden" id="gender-panel">
           <div>
             <div className="flex items-center gap-2 mb-1">
@@ -2152,7 +2082,6 @@ export function Dashboard({
           </div>
         </div>
 
-        {/* Card 2: Peak Entrance Hours & Heatmap */}
         <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm flex flex-col justify-between w-full min-w-0" id="peak-hours-panel">
           <div>
             <div className="flex justify-between items-center mb-1 flex-wrap gap-2">
@@ -2190,9 +2119,7 @@ export function Dashboard({
             
             {heatmapTab === 'heatmap' ? (
               <div className="flex flex-col gap-1.5 w-full select-none" id="traffic-hours-heatmap">
-                {/* Top Row: Hours label markers */}
                 <div className="flex items-center w-full animate-fade-in">
-                  {/* Spacer matching Day labels column */}
                   <div className="w-7 shrink-0" />
                   <div className="flex gap-1 w-full text-center">
                     {[6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21].map((h, i) => (
@@ -2203,17 +2130,14 @@ export function Dashboard({
                   </div>
                 </div>
 
-                {/* Mon-Sun rows */}
                 {heatmapGrid.map((row) => {
                   const rowDayName = row[0].dayName;
                   return (
                     <div key={rowDayName} className="flex items-center w-full group/row animate-fade-in">
-                      {/* Day label */}
                       <span className="text-[10px] font-mono text-slate-500 font-semibold w-7 shrink-0 text-left leading-none">
                         {rowDayName}
                       </span>
 
-                      {/* Columns of blocks */}
                       <div className="flex gap-1 w-full">
                         {row.map((cell, cIdx) => {
                           let cellBg = 'bg-slate-50 border-slate-150 hover:border-slate-350';
@@ -2329,7 +2253,6 @@ export function Dashboard({
               </div>
             )}
             
-            {/* Heatmap Legend row */}
             {heatmapTab === 'heatmap' && (
               <div className="flex justify-between items-center text-[9px] text-slate-400 font-mono select-none mt-1 leading-none">
                 <span>Hover blocks to inspect density</span>
@@ -2347,7 +2270,6 @@ export function Dashboard({
           </div>
         </div>
 
-        {/* Card 3: Monthly Revenue Distribution */}
         <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm flex flex-col justify-between w-full min-w-0 overflow-hidden" id="revenue-share-panel">
           <div>
             <div className="flex items-center gap-2 mb-1">
@@ -2436,11 +2358,9 @@ export function Dashboard({
       </div>
       )}
 
-      {/* Upcoming Birthdays View Content */}
       {activeDashboardTab === 'birthdays' && (
         <div className="space-y-6 animate-fade-in" id="upcoming-birthdays-view">
           
-          {/* Header & KPI Summary Banner */}
           <div className="bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-indigo-500/10 border border-amber-200 dark:border-amber-900/40 rounded-3xl p-6 shadow-sm">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
               <div className="space-y-1">
@@ -2462,7 +2382,6 @@ export function Dashboard({
                 </div>
               </div>
 
-              {/* Quick KPI Stat Chips */}
               <div className="grid grid-cols-3 gap-3 bg-white/80 dark:bg-slate-900/80 p-3 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs text-center shrink-0">
                 <div className="px-3 py-1">
                   <span className="text-[10px] font-extrabold uppercase text-slate-400 block tracking-wider">7-Day Total</span>
@@ -2486,9 +2405,7 @@ export function Dashboard({
               </div>
             </div>
 
-            {/* Filter and Search Controls */}
             <div className="mt-6 pt-4 border-t border-amber-200/60 dark:border-amber-900/30 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
-              {/* Search input */}
               <div className="relative flex-1 max-w-md">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
@@ -2509,7 +2426,6 @@ export function Dashboard({
                 )}
               </div>
 
-              {/* Filter Pills */}
               <div className="flex bg-white/80 dark:bg-slate-900/80 p-1 rounded-xl border border-slate-200/80 dark:border-slate-800 shrink-0">
                 <button
                   onClick={() => setBirthdayFilter('all')}
@@ -2548,7 +2464,6 @@ export function Dashboard({
             </div>
           </div>
 
-          {/* Celebrants Grid */}
           {filteredBirthdayMembers.length === 0 ? (
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-12 text-center space-y-3">
               <div className="w-12 h-12 bg-amber-50 dark:bg-amber-950/40 text-amber-500 rounded-2xl flex items-center justify-center mx-auto">
@@ -2579,7 +2494,6 @@ export function Dashboard({
                     }`}
                     id={`birthday-card-${member.id}`}
                   >
-                    {/* Top Banner Ribbon */}
                     <div className={`-mx-6 -mt-6 px-6 py-3 mb-5 border-b flex items-center justify-between ${
                       isToday 
                         ? 'bg-gradient-to-r from-amber-500 via-rose-500 to-amber-600 text-white border-amber-500'
@@ -2607,7 +2521,6 @@ export function Dashboard({
                       </span>
                     </div>
 
-                    {/* Member Core Details */}
                     <div className="space-y-4">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3">
@@ -2634,7 +2547,6 @@ export function Dashboard({
                           </div>
                         </div>
 
-                        {/* Status Badge */}
                         {isWished ? (
                           <span className="bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-[10px] font-extrabold px-2.5 py-1 rounded-full flex items-center gap-1 shrink-0">
                             <Check className="w-3 h-3" /> Wished Today
@@ -2646,7 +2558,6 @@ export function Dashboard({
                         )}
                       </div>
 
-                      {/* Contact & DOB Summary Pill */}
                       <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-3 border border-slate-150 dark:border-slate-800 text-xs space-y-1.5 font-sans">
                         <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
                           <span className="flex items-center gap-1.5 text-slate-400">
@@ -2681,7 +2592,6 @@ export function Dashboard({
                       </div>
                     </div>
 
-                    {/* Action Bar */}
                     <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2">
                       <button
                         onClick={() => handleOpenGreetingModal(item)}
@@ -2718,12 +2628,10 @@ export function Dashboard({
         </div>
       )}
 
-      {/* Printable Report Modal */}
       {showReportModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 antialiased sm:p-6 select-none print:p-0 print:bg-white" id="report-modal-overlay">
           <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl flex flex-col w-full max-w-4xl max-h-[90vh] overflow-hidden print:max-h-none print:border-none print:shadow-none print:rounded-none">
             
-            {/* Modal Interactive Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50 print:hidden shrink-0">
               <div className="flex items-center gap-2.5 text-slate-800">
                 <FileText className="w-5 h-5 text-indigo-600" />
@@ -2764,10 +2672,8 @@ export function Dashboard({
               </div>
             </div>
 
-            {/* Scrollable Document Area */}
             <div className="p-6 overflow-y-auto bg-slate-100/50 print:p-0 print:bg-white flex-1 flex flex-col items-center">
               
-              {/* Quick Edit Parameters Drawer when in Edit Mode */}
               {isReportEditMode && (
                 <div className="w-full max-w-[210mm] bg-amber-50/90 border border-amber-200 rounded-2xl p-4 mb-4 shadow-sm text-left print:hidden space-y-3 animate-fade-in">
                   <div className="flex items-center justify-between border-b border-amber-200/80 pb-2">
@@ -2891,10 +2797,8 @@ export function Dashboard({
                 </div>
               )}
 
-              {/* High-Fidelity A4 Report Document Sheet */}
               <div className="bg-white border border-slate-200 p-6 font-sans text-left relative overflow-hidden select-none w-full max-w-[210mm] shadow-xs print:shadow-none print:border-none print:p-0" id="gym-report-sheet">
                 
-                {/* Dynamically Inject styles specific for printing this report */}
                 <style>{`
                   @media print {
                     @page {
@@ -2935,7 +2839,6 @@ export function Dashboard({
                   }
                 `}</style>
 
-                {/* Header Branding */}
                 <div className="flex flex-row justify-between items-start border-b border-slate-200 pb-4 mb-4">
                   <div className="flex items-start gap-3">
                     <div className="shrink-0 p-1 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-center">
@@ -3024,7 +2927,6 @@ export function Dashboard({
                   </div>
                 </div>
 
-                {/* Title & Scope */}
                 <div className="mb-4">
                   {isReportEditMode ? (
                     <div className="space-y-1">
@@ -3053,7 +2955,6 @@ export function Dashboard({
                   )}
                 </div>
 
-                {/* KPI scorecards grid */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
                   
                   <div className="border border-slate-200 rounded-xl p-2.5 bg-slate-50/50">
@@ -3082,10 +2983,8 @@ export function Dashboard({
 
                 </div>
 
-                {/* Subsections list */}
                 <div className="space-y-4">
                   
-                  {/* Membership breakdown section */}
                   <div className="border border-slate-200 rounded-xl overflow-hidden">
                     <div className="bg-slate-50 px-3 py-1.5 border-b border-slate-200">
                       <h3 className="font-bold text-slate-700 uppercase tracking-wider text-[10.5px]">
@@ -3124,10 +3023,8 @@ export function Dashboard({
                     </table>
                   </div>
 
-                  {/* Check-ins and Hourly Traffic workload breakdown */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     
-                    {/* Membership status overview */}
                     <div className="border border-slate-200 rounded-xl overflow-hidden">
                       <div className="bg-slate-50 px-3 py-1.5 border-b border-slate-200">
                         <h3 className="font-bold text-slate-700 uppercase tracking-wider text-[10.5px]">
@@ -3154,7 +3051,6 @@ export function Dashboard({
                       </div>
                     </div>
 
-                    {/* Peak operations info */}
                     <div className="border border-slate-200 rounded-xl overflow-hidden flex flex-col justify-between">
                       <div className="bg-slate-50 px-3 py-1.5 border-b border-slate-200">
                         <h3 className="font-bold text-slate-700 uppercase tracking-wider text-[10.5px]">
@@ -3186,7 +3082,6 @@ export function Dashboard({
 
                   </div>
 
-                  {/* Demographics Overview section */}
                   <div className="border border-slate-200 rounded-xl overflow-hidden">
                     <div className="bg-slate-50 px-3 py-1.5 border-b border-slate-200">
                       <h3 className="font-bold text-slate-700 uppercase tracking-wider text-[10.5px]">
@@ -3221,7 +3116,6 @@ export function Dashboard({
 
                 </div>
 
-                {/* Footer and Signatures */}
                 <div className="border-t border-slate-200 mt-5 pt-4">
                   <div className="grid grid-cols-2 gap-8 text-center text-[10.5px]">
                     <div className="flex flex-col items-center">
@@ -3264,12 +3158,10 @@ export function Dashboard({
         </div>
       )}
 
-      {/* Birthday Greeting Composer Modal */}
       {greetingModalData && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-fade-in" id="modal-birthday-greeting">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl relative text-left space-y-5">
             
-            {/* Modal Header */}
             <div className="flex items-start justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 bg-gradient-to-tr from-amber-500 to-rose-500 text-white rounded-2xl shadow-sm">
@@ -3293,7 +3185,6 @@ export function Dashboard({
               </button>
             </div>
 
-            {/* Target Member Quick Badge */}
             <div className="bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/40 rounded-2xl p-3 flex items-center justify-between text-xs">
               <div>
                 <span className="font-extrabold text-amber-900 dark:text-amber-200 block">
@@ -3308,7 +3199,6 @@ export function Dashboard({
               </span>
             </div>
 
-            {/* Channel Selector */}
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
                 Dispatch Channel:
@@ -3352,7 +3242,6 @@ export function Dashboard({
               </div>
             </div>
 
-            {/* Editable Message Box */}
             <div className="space-y-1.5">
               <div className="flex justify-between items-center">
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
@@ -3381,7 +3270,6 @@ export function Dashboard({
               />
             </div>
 
-            {/* Copied Toast Alert */}
             {copiedToast && (
               <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs font-bold rounded-xl flex items-center justify-between animate-fade-in">
                 <span className="flex items-center gap-2">
@@ -3390,7 +3278,6 @@ export function Dashboard({
               </div>
             )}
 
-            {/* Action Buttons */}
             <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
               <button
                 type="button"
@@ -3414,7 +3301,6 @@ export function Dashboard({
         </div>
       )}
 
-      {/* Edit DOB Modal */}
       {editDobMember && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in" id="modal-edit-dob">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-sm w-full p-6 shadow-2xl relative text-left space-y-4">

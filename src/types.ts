@@ -92,7 +92,6 @@ export interface Feedback {
   status: 'Pending' | 'Reviewed' | 'Addressed';
 }
 
-
 export type CheckInMethod = CheckIn['method'];
 
 export interface CheckInResponse {

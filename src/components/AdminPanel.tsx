@@ -1,8 +1,3 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import React, { useState } from 'react';
 import { 
   Users, 
@@ -103,14 +98,12 @@ export function AdminPanel({
     try {
       await actionFn();
       setSuccessMsg(successNotice);
-      // Remove loading status after finished
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch (e) {
       console.error(e);
       setSuccessMsg("Reset operation failed. Check logs.");
     } finally {
       setActiveLoader(null);
-      // Reset confirmations
       setConfirmations(prev => ({ ...prev, [actionKey]: false }));
     }
   };
@@ -137,13 +130,11 @@ export function AdminPanel({
     );
   }
 
-  // Count members with checkins > 0
   const membersWithCheckIns = members.filter(m => m.totalCheckIns > 0).length;
 
   return (
     <div className="space-y-8 text-left select-none animate-slide-in">
       
-      {/* Admin Panel Header Banner */}
       <div className="bg-slate-900 border border-slate-800 text-white rounded-3xl p-6 shadow-md relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-colors duration-150">
         <div className="absolute top-0 bottom-0 right-0 w-1/3 bg-radial from-emerald-500/10 to-transparent pointer-events-none"></div>
         <div className="flex items-center gap-4">
@@ -171,7 +162,6 @@ export function AdminPanel({
         </div>
       </div>
 
-      {/* Operation Notice Bar */}
       {successMsg && (
         <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-150 dark:border-emerald-900/30 text-xs font-bold text-emerald-700 dark:text-emerald-400 leading-relaxed flex gap-3 items-center animate-bounce shadow-xs" id="admin-notice-banner">
           <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
@@ -179,7 +169,6 @@ export function AdminPanel({
         </div>
       )}
 
-      {/* 1A. FIREBASE OPERATIONS COCKPIT & STORAGE FOOTPRINTS MONITOR */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-6 shadow-sm mr-auto w-full" id="firebase-low-memory-monitor">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 dark:border-slate-850 pb-4 mb-6">
           <div className="flex items-center gap-3">
@@ -204,7 +193,6 @@ export function AdminPanel({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Connection Status card */}
           <div className="p-4 rounded-2xl bg-slate-50/60 dark:bg-slate-950/45 border border-slate-150 dark:border-slate-850 flex flex-col justify-between">
             <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wide">
               Firestore Connection
@@ -219,7 +207,6 @@ export function AdminPanel({
             </div>
           </div>
 
-          {/* Database payload footprint card */}
           <div className="p-4 rounded-2xl bg-slate-50/60 dark:bg-slate-950/45 border border-slate-150 dark:border-slate-850 flex flex-col justify-between">
             <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wide">
               Payload Footprint (Est)
@@ -234,7 +221,6 @@ export function AdminPanel({
             </div>
           </div>
 
-          {/* Total RAM compression saving card */}
           <div className="p-4 rounded-2xl bg-slate-50/60 dark:bg-slate-950/45 border border-slate-150 dark:border-slate-850 flex flex-col justify-between">
             <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wide">
               RAM Compression Saved
@@ -249,7 +235,6 @@ export function AdminPanel({
             </div>
           </div>
 
-          {/* Data structures cached count */}
           <div className="p-4 rounded-2xl bg-slate-50/60 dark:bg-slate-950/45 border border-slate-150 dark:border-slate-850 flex flex-col justify-between">
             <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wide">
               Total Managed Nodes
@@ -265,7 +250,6 @@ export function AdminPanel({
           </div>
         </div>
 
-        {/* Breakdown details */}
         <div className="mt-4 p-4 rounded-2xl bg-slate-50/30 dark:bg-slate-950/20 border border-slate-150 dark:border-slate-850/60 text-xs">
           <h4 className="font-bold text-slate-700 dark:text-slate-350 mb-2 uppercase tracking-wide text-[10px]">
             Active Firestore Collections Sizing Breakdown
@@ -294,7 +278,6 @@ export function AdminPanel({
           <button
             type="button"
             onClick={async () => {
-              // Simulating cache compaction & force GC
               setSuccessMsg('Garbage collector triggered! Client-side local memory storage has been purged of obsolete temporary variables, and synced indexes have been compacted to low memory format.');
               setTimeout(() => setSuccessMsg(null), 5500);
             }}
@@ -307,7 +290,6 @@ export function AdminPanel({
         </div>
       </div>
 
-      {/* Realtime Customizable Security Credentials Config */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-6 shadow-sm mr-auto w-full" id="admin-security-settings">
         <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-850 pb-4 mb-6">
           <div className="p-2.5 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-2xl border border-indigo-100 dark:border-indigo-850">
@@ -326,7 +308,6 @@ export function AdminPanel({
         <form onSubmit={handleSaveSecurity} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             
-            {/* Gym Owner section */}
             <div className="space-y-4 p-4 rounded-2xl bg-slate-50/50 dark:bg-slate-950/50 border border-slate-150 dark:border-slate-850">
               <div className="flex items-center gap-2 pb-1 border-b border-slate-100 dark:border-slate-800">
                 <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
@@ -383,7 +364,6 @@ export function AdminPanel({
               </div>
             </div>
 
-            {/* System Admin section */}
             <div className="space-y-4 p-4 rounded-2xl bg-slate-50/50 dark:bg-slate-950/50 border border-slate-150 dark:border-slate-850">
               <div className="flex items-center gap-2 pb-1 border-b border-slate-100 dark:border-slate-800">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
@@ -471,10 +451,8 @@ export function AdminPanel({
         </form>
       </div>
 
-      {/* Grid of Reset Features */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6" id="admin-reset-actions-grid">
         
-        {/* 1. RESET CHECK-INS STATISTICS */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-5 shadow-xs flex flex-col justify-between hover:border-slate-300 dark:hover:border-slate-700 transition-colors duration-150">
           <div className="space-y-3">
             <div className="flex justify-between items-start">
@@ -494,7 +472,6 @@ export function AdminPanel({
               </p>
             </div>
             
-            {/* Context Stats */}
             <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-xl divide-y divide-slate-100 dark:divide-slate-850">
               <div className="flex justify-between items-center py-1 text-xs">
                 <span className="text-slate-400 font-medium">Total Registered Profiles</span>
@@ -545,7 +522,6 @@ export function AdminPanel({
           </div>
         </div>
 
-        {/* 2. PURGE ENTRANCE CHECK-IN LOGS */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-5 shadow-xs flex flex-col justify-between hover:border-slate-300 dark:hover:border-slate-700 transition-colors duration-150">
           <div className="space-y-3">
             <div className="flex justify-between items-start">
@@ -565,7 +541,6 @@ export function AdminPanel({
               </p>
             </div>
             
-            {/* Context Stats */}
             <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-xl divide-y divide-slate-100 dark:divide-slate-850">
               <div className="flex justify-between items-center py-1 text-xs">
                 <span className="text-slate-400 font-medium">Local & Firestore Checkin Log Size</span>
@@ -616,7 +591,6 @@ export function AdminPanel({
           </div>
         </div>
 
-        {/* 3. RESET DISPATCH MESSAGES & GREETINGS LOGS */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-5 shadow-xs flex flex-col justify-between hover:border-slate-300 dark:hover:border-slate-700 transition-colors duration-150">
           <div className="space-y-3">
             <div className="flex justify-between items-start">
@@ -636,7 +610,6 @@ export function AdminPanel({
               </p>
             </div>
             
-            {/* Context Stats */}
             <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-xl divide-y divide-slate-100 dark:divide-slate-850">
               <div className="flex justify-between items-center py-1 text-xs">
                 <span className="text-slate-400 font-medium">Currently Tracked message logs</span>
@@ -687,7 +660,6 @@ export function AdminPanel({
           </div>
         </div>
 
-        {/* 4. TOTAL FACTORY RESET (System Restoration) */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-855 rounded-3xl p-5 shadow-xs flex flex-col justify-between hover:border-slate-300 dark:hover:border-slate-700 transition-colors duration-150 relative overflow-hidden">
           <div className="absolute top-0 bottom-0 right-0 w-2 h-full bg-rose-500/80 pointer-events-none"></div>
           <div className="space-y-3">
@@ -708,7 +680,6 @@ export function AdminPanel({
               </p>
             </div>
             
-            {/* Context Stats */}
             <div className="p-3 bg-amber-500/5 dark:bg-amber-450/5 rounded-xl border border-amber-500/10 text-[10px] text-amber-650 dark:text-amber-400 flex gap-2 items-start leading-relaxed font-sans font-medium">
               <AlertIcon className="w-4 h-4 shrink-0 mt-0.5 text-amber-500" />
               <span>Resetting restores original default profiles (John Doe, Sarah Connor, etc.), base configurations, pricing structures, and initial checkin logs across Cloud Firestore & local slots.</span>
@@ -753,7 +724,6 @@ export function AdminPanel({
           </div>
         </div>
 
-        {/* 5. MEMBER FEEDBACK & SUGGESTIONS DASHBOARD */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-6 shadow-xs md:col-span-2 space-y-6 hover:border-slate-300 dark:hover:border-slate-755 transition-colors duration-150" id="admin-feedbacks-card">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 dark:border-slate-850 pb-4">
             <div className="flex items-center gap-3 text-left">
@@ -785,7 +755,6 @@ export function AdminPanel({
             )}
           </div>
 
-          {/* Feedback Metrics Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-xl text-left border border-slate-100 dark:border-slate-850">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Received</span>
@@ -818,7 +787,6 @@ export function AdminPanel({
             </div>
           </div>
 
-          {/* Table / List rendering */}
           {feedbacks.length === 0 ? (
             <div className="py-8 text-center bg-slate-50 dark:bg-slate-950 rounded-2xl border border-dashed border-slate-200 dark:border-slate-850">
               <HelpCircle className="w-8 h-8 text-slate-350 mx-auto animate-pulse mb-2" />
@@ -875,7 +843,6 @@ export function AdminPanel({
                     </div>
                   </div>
 
-                  {/* Actions Bar */}
                   <div className="flex flex-row md:flex-col justify-between md:justify-center items-end gap-3.5 shrink-0 border-t md:border-t-0 pt-2.5 md:pt-0 border-slate-100 dark:border-slate-850">
                     <div className="flex flex-col items-start md:items-end gap-1">
                       <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">

@@ -1,11 +1,5 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import React, { useState } from 'react';
 import { Member, MembershipPlanName, MembershipPlan, AdvancePaymentRecord } from '../types';
-import * as XLSX from 'xlsx';
 
 import { generateQrSvg } from '../utils/qrGenerator';
 import { calculateDaysRemaining, calculateExpiryDate, formatDateDDMMYYYY, formatDateISO, parseDate, todayISO } from '../utils/dateUtils';
@@ -59,7 +53,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
   const [selectedBadgeMember, setSelectedBadgeMember] = useState<Member | null>(null);
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
 
-  // Excel Import States
   const [showImportForm, setShowImportForm] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importPreview, setImportPreview] = useState<any[]>([]);
@@ -67,7 +60,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
   const [isImporting, setIsImporting] = useState(false);
   const [importStatusMessage, setImportStatusMessage] = useState<string | null>(null);
 
-  // New Member Form States
   const [newName, setNewName] = useState('');
   const [newEmail, setNewEmail] = useState('');
   const [newPhone, setNewPhone] = useState('');
@@ -84,12 +76,10 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
 
-  // Advanced camera settings state
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
 
-  // Advance Payment States
   const [showAdvanceModal, setShowAdvanceModal] = useState(false);
   const [advanceMemberId, setAdvanceMemberId] = useState<string>('');
   const [advanceAmount, setAdvanceAmount] = useState<string>('1000');
@@ -101,7 +91,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
   const [advanceNotes, setAdvanceNotes] = useState<string>('');
   const [advanceFeedback, setAdvanceFeedback] = useState<{ success: boolean; message: string; receipt?: any } | null>(null);
 
-  // Advance Receipt Modal & History Modal States
   const [activeReceipt, setActiveReceipt] = useState<any | null>(null);
   const [showReceiptModal, setShowReceiptModal] = useState<boolean>(false);
   const [showAdvanceHistoryModal, setShowAdvanceHistoryModal] = useState<boolean>(false);
@@ -143,7 +132,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
       setCameraStream(stream);
       setIsCameraActive(true);
 
-      // Wait briefly for ref alignment
       setTimeout(() => {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
@@ -151,7 +139,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
         }
       }, 100);
 
-      // Fetch devices list so labels/IDs are populated after permission is given
       await loadVideoDevices();
     } catch (err) {
       console.error("Camera access failed:", err);
@@ -186,7 +173,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
       const ctx = canvas.getContext('2d');
       if (ctx) {
         const video = videoRef.current;
-        // Draw centered square crop from video feed
         const videoWidth = video.videoWidth || 640;
         const videoHeight = video.videoHeight || 640;
         const size = Math.min(videoWidth, videoHeight);
@@ -205,7 +191,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
     if (file) fileToDataUrl(file).then(setCapturedPhoto);
   };
 
-  // Handle addition
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName.trim() || !newEmail.trim() || !newPhone.trim() || !newDob.trim()) {
@@ -253,7 +238,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
       autoRenew: newAutoRenew,
     });
 
-    // Reset Form
     setNewName('');
     setNewEmail('');
     setNewPhone('');
@@ -269,7 +253,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
     setShowAddForm(false);
   };
 
-  // Filter members
   const filteredMembers = members.filter(m => {
     const matchesSearch = m.name.toLowerCase().includes(search.toLowerCase()) || 
                           m.id.toLowerCase().includes(search.toLowerCase()) ||
@@ -283,7 +266,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
     return matchesSearch && matchesFilter && matchesAdvance;
   });
 
-  // Open Advance Payment Modal
   const handleOpenAdvanceModal = (targetMember?: Member) => {
     if (targetMember) {
       setAdvanceMemberId(targetMember.id);
@@ -304,7 +286,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
     setShowAdvanceModal(true);
   };
 
-  // Process advance payment submission
   const handleProcessAdvancePayment = (e: React.FormEvent) => {
     e.preventDefault();
     const targetMember = members.find(m => m.id === advanceMemberId);
@@ -322,7 +303,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
     const todayIso = new Date().toISOString();
     const receiptNo = `ADV-${Date.now().toString().slice(-6)}`;
 
-    // Calculate extended expiry date if extension enabled
     let newExpiryDate = targetMember.expiryDate;
     if (advanceExtendExpiry) {
       const currentExp = parseDate(targetMember.expiryDate) || new Date();
@@ -383,7 +363,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
     });
   };
 
-  // Execute quick renew: Resets relative to today
   const handleQuickRenew = (m: Member) => {
     const planObj = plans.find(p => p.name === m.plan) || plans[0];
     const today = todayISO();
@@ -395,7 +374,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
     });
   };
 
-  // Toggle paused/active status
   const handleTogglePause = (m: Member) => {
     const newStatus = m.status === 'Paused' ? 'Active' : 'Paused';
     onUpdateMember(m.id, { status: newStatus });
@@ -459,10 +437,11 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
     setImportStatusMessage(null);
     
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const data = e.target?.result;
         if (!data) throw new Error("Could not read file data.");
+        const XLSX = await import('xlsx');
         const workbook = XLSX.read(data, { type: 'array' });
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
@@ -475,7 +454,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
         const headers = json[0].map((h: any) => String(h || '').trim().toLowerCase());
         const rows = json.slice(1);
         
-        // Locate column indices based on standard headers
         const idIdx = headers.findIndex((h: string) => h.includes('id') || h.includes('dob') || h.includes('birth') || h.includes('code') || h === 'dob id');
         const nameIdx = headers.findIndex((h: string) => h.includes('name') || h.includes('full name') || h.includes('member'));
         const emailIdx = headers.findIndex((h: string) => h.includes('email') || h.includes('mail'));
@@ -530,7 +508,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
           const phone = phoneIdx !== -1 && row[phoneIdx] ? String(row[phoneIdx]).trim() : '+91 99999 99999';
           const alternatePhone = altPhoneIdx !== -1 && row[altPhoneIdx] ? String(row[altPhoneIdx]).trim() : undefined;
           
-          // Resolve plan
           let plan = 'Monthly Core';
           if (planIdx !== -1 && row[planIdx]) {
             const excelPlan = String(row[planIdx]).trim();
@@ -540,7 +517,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
             }
           }
           
-          // Resolve status
           let status: 'Active' | 'Paused' | 'Expired' = 'Active';
           if (statusIdx !== -1 && row[statusIdx]) {
             const excelStatus = String(row[statusIdx]).trim().toLowerCase();
@@ -551,7 +527,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
           
           const gender = genderIdx !== -1 && row[genderIdx] ? String(row[genderIdx]).trim() : 'Male';
 
-          // Resolve shift timing
           let shiftTiming: 'Morning' | 'Evening' = 'Morning';
           if (shiftIdx !== -1 && row[shiftIdx]) {
             const st = String(row[shiftIdx]).trim().toLowerCase();
@@ -562,14 +537,12 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
             }
           }
           
-          // Resolve join date
           let joinDate = todayISO();
           if (joinIdx !== -1 && row[joinIdx]) {
             const jd = String(row[joinIdx]).trim();
             joinDate = formatDateISO(jd);
           }
           
-          // Resolve expiry date
           let expiryDate = '';
           if (expiryIdx !== -1 && row[expiryIdx]) {
             const ed = String(row[expiryIdx]).trim();
@@ -642,7 +615,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
       setImportStatusMessage(`Import successfully finished! Replicated ${createdCount + updatedCount} members (${createdCount} new, ${updatedCount} updated) directly to the database.`);
       setImportPreview([]);
       setImportFile(null);
-      // Wait 3 seconds then close
       setTimeout(() => {
         setShowImportForm(false);
         setImportStatusMessage(null);
@@ -664,7 +636,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
   return (
     <div className="space-y-6 animate-fade-in" id="members-management-section">
       
-      {/* Header and Add Actions */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-sans font-bold tracking-tight text-slate-900">
@@ -733,7 +704,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
         </div>
       </div>
 
-      {/* Excel Import Panel */}
       {showImportForm && (
         <div 
           className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-md space-y-6 animate-slide-down"
@@ -910,7 +880,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
         </div>
       )}
 
-      {/* Add New Member Form Panel */}
       {showAddForm && (
         <form 
           onSubmit={handleAddSubmit} 
@@ -1082,7 +1051,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
             </label>
           </div>
 
-          {/* Member Profile Photo Capture (Webcam & File upload options) */}
           <div className="md:col-span-3 bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-200/60 pb-3">
               <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
@@ -1105,7 +1073,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
             </div>
 
             <div className="flex flex-col lg:flex-row gap-6 items-center justify-center">
-              {/* Left Column: Live camera view / Captured preview (INCREASED PHOTO SPACE) */}
               <div className="relative w-56 h-56 sm:w-64 sm:h-64 rounded-2xl border-4 border-white dark:border-slate-800 shadow-lg bg-slate-900 overflow-hidden flex items-center justify-center transition-all duration-300">
                 {capturedPhoto ? (
                   <img 
@@ -1121,13 +1088,11 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
                       playsInline
                       muted
                     />
-                    {/* Camera Target Overlay Frame */}
                     <div className="absolute inset-0 pointer-events-none border border-white/10 flex flex-col justify-between">
                       <div className="h-1/3 w-full border-b border-white/20 border-dashed" />
                       <div className="h-1/3 w-full border-b border-white/20 border-dashed" />
                       <div className="absolute inset-y-0 left-1/3 w-1/3 border-x border-white/20 border-dashed" />
                     </div>
-                    {/* Viewfinder Target Box */}
                     <div className="absolute inset-6 pointer-events-none border-2 border-dashed border-sky-400/40 rounded-xl" />
                   </>
                 ) : (
@@ -1138,7 +1103,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
                   </div>
                 )}
 
-                {/* Camera Live Status Dot */}
                 {isCameraActive && (
                   <div className="absolute top-3 right-3 bg-emerald-500 text-[8px] text-black font-black uppercase tracking-wider px-2 py-0.5 rounded-full flex items-center gap-1 shadow-xs z-10">
                     <span className="w-1.5 h-1.5 rounded-full bg-black animate-ping" />
@@ -1147,7 +1111,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
                 )}
               </div>
 
-              {/* Right Column: Interaction Controls */}
               <div className="flex-1 space-y-4 w-full text-center lg:text-left">
                 {!capturedPhoto ? (
                   <div className="space-y-4">
@@ -1155,10 +1118,8 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
                       For premium member cards & front-desk check-ins, capture a high-res photo directly from your device, or upload an image.
                     </p>
 
-                    {/* Camera Controls & Switcher Options */}
                     {isCameraActive && (
                       <div className="bg-white border border-slate-200 p-3 rounded-xl space-y-3 shadow-3xs text-left" id="camera-settings-panel">
-                        {/* Device Dropdown Selector */}
                         {videoDevices.length > 0 && (
                           <div className="space-y-1">
                             <label className="text-[9px] font-extrabold text-slate-450 uppercase tracking-wider block">Webcam Input Device</label>
@@ -1176,7 +1137,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
                           </div>
                         )}
 
-                        {/* Presets Grid */}
                         <div className="space-y-1">
                           <label className="text-[9px] font-extrabold text-slate-450 uppercase tracking-wider block">Facing Presets</label>
                           <div className="grid grid-cols-2 gap-2">
@@ -1273,7 +1233,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
         </form>
       )}
 
-      {/* Database Controls: Search and Filters */}
       <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm flex flex-col gap-4" id="member-filters">
         <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
           <div className="relative flex-1">
@@ -1332,7 +1291,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
               );
             })}
 
-            {/* Filter by Advance Paid Credit */}
             <button
               type="button"
               onClick={() => setAdvanceFilterOnly(!advanceFilterOnly)}
@@ -1354,7 +1312,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
           </div>
         </div>
 
-        {/* Real-time search/filter feedback metadata */}
         <div className="text-left border-t border-slate-100 pt-2.5 flex justify-between items-center text-xs text-slate-450 font-sans">
           <span>
             Showing <strong className="text-slate-800">{filteredMembers.length}</strong> of <strong className="text-slate-600">{members.length}</strong> registered members matching criteria
@@ -1367,7 +1324,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
         </div>
       </div>
 
-      {/* Bulk Update Controls */}
       {selectedMemberIds.length > 0 && (
         <div className="bg-slate-900 border border-slate-800 text-white rounded-2xl p-4 shadow-md flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 animate-scale-up" id="bulk-operations-bar">
           <div className="flex items-center gap-3">
@@ -1381,7 +1337,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
           </div>
 
           <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto mt-2 lg:mt-0">
-            {/* Quick Status Update */}
             <div className="flex flex-wrap items-center gap-1.5 bg-slate-800 rounded-xl px-2 py-1.5 border border-slate-700">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono px-1">Status:</span>
               <button
@@ -1407,7 +1362,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
               </button>
             </div>
 
-            {/* Quick Plan Tier Update */}
             <div className="flex items-center gap-1.5 bg-slate-800 rounded-xl px-2 py-1.5 border border-slate-700">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono px-1">Plan:</span>
               <select
@@ -1427,7 +1381,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
               </select>
             </div>
 
-            {/* Quick Auto-Renew Update */}
             <div className="flex items-center gap-1.5 bg-slate-800 rounded-xl px-2 py-1.5 border border-slate-700">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono px-1 font-sans">Renew Option:</span>
               <button
@@ -1448,7 +1401,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
               </button>
             </div>
 
-            {/* Bulk Delete */}
             <button
               type="button"
               onClick={handleBulkDelete}
@@ -1459,7 +1411,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
               <span>Bulk Delete</span>
             </button>
 
-            {/* Clear Selection */}
             <button
               type="button"
               onClick={() => setSelectedMemberIds([])}
@@ -1471,7 +1422,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
         </div>
       )}
 
-      {/* Members Directory Table Grid */}
       <div className="bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-sm" id="members-list-table">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -1514,7 +1464,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
                 return (
                   <tr key={m.id} className={`hover:bg-slate-50/40 transition-colors ${isChecked ? 'bg-indigo-50/20' : ''}`}>
                     
-                    {/* Checkbox column */}
                     <td className="py-4 px-4 text-center w-12">
                       <input 
                         type="checkbox"
@@ -1530,7 +1479,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
                       />
                     </td>
 
-                    {/* ID & Contact Details */}
                     <td className="py-2 px-6">
                       <div className="flex items-center gap-3">
                         <div className="relative shrink-0">
@@ -1616,7 +1564,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
                       </div>
                     </td>
 
-                    {/* Badge Status */}
                     <td className="py-4 px-6">
                       <span className={`inline-flex items-center gap-1.5 text-xs px-3 py-1 rounded-full font-sans font-black leading-none shadow-3xs transition-all ${
                         m.status === 'Active' 
@@ -1647,12 +1594,10 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
                       </span>
                     </td>
 
-                    {/* Subscription Plan details */}
                     <td className="py-4 px-6 font-semibold font-sans text-slate-800">
                       {m.plan}
                     </td>
 
-                    {/* Period Active */}
                     <td className="py-4 px-6">
                       <div className="space-y-0.5 font-sans">
                         <p className="font-semibold text-slate-700 text-xs flex items-center gap-1.5">
@@ -1688,7 +1633,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
                       </div>
                     </td>
 
-                    {/* Check In Totals */}
                     <td className="py-4 px-6">
                       <div className="font-mono text-center md:text-left space-y-0.5">
                         <p className="text-xs font-bold text-slate-850">
@@ -1702,11 +1646,9 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
                       </div>
                     </td>
 
-                    {/* Custom admin functions */}
                     <td className="py-4 px-6 text-right">
                       <div className="flex items-center justify-end gap-2">
                         
-                        {/* Receive Advance Payment Button */}
                         <button
                           onClick={() => handleOpenAdvanceModal(m)}
                           className="p-1 px-2.5 py-1.5 rounded-lg border border-purple-200 text-purple-700 hover:text-purple-900 hover:bg-purple-50 hover:border-purple-300 transition-colors flex items-center gap-1 font-bold text-xs cursor-pointer shadow-3xs"
@@ -1716,7 +1658,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
                           <span>Advance</span>
                         </button>
 
-                        {/* Interactive invoice preview button */}
                         <button
                           onClick={() => onTriggerInvoice?.(m)}
                           className="p-1 px-2 py-1.5 rounded-lg border border-indigo-200 text-indigo-600 hover:text-indigo-900 hover:bg-indigo-50 hover:border-indigo-350 transition-colors flex items-center gap-1 font-semibold text-xs cursor-pointer"
@@ -1726,7 +1667,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
                           Invoice
                         </button>
 
-                        {/* Display QR Badge */}
                         <button
                           onClick={() => setSelectedBadgeMember(m)}
                           className="p-1 px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:text-slate-950 hover:bg-slate-50 hover:border-slate-350 transition-colors flex items-center gap-1 font-semibold text-xs"
@@ -1736,7 +1676,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
                           Badge
                         </button>
 
-                        {/* Fast Pause / Resume */}
                         <button
                           onClick={() => handleTogglePause(m)}
                           className={`p-1.5 rounded-lg border transition-all ${
@@ -1749,7 +1688,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
                           {m.status === 'Paused' ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
                         </button>
 
-                        {/* Fast Renew */}
                         <button
                           onClick={() => handleQuickRenew(m)}
                           className="p-1.5 rounded-lg border border-slate-200 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 hover:border-emerald-250 transition-all"
@@ -1758,7 +1696,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
                           <RotateCcw className="w-3.5 h-3.5" />
                         </button>
 
-                        {/* Delete member profile */}
                         <button
                           onClick={() => {
                             if (confirm(`Remove custom profile of ${m.name} permanently?`)) {
@@ -1792,7 +1729,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
         </div>
       </div>
 
-      {/* Member Badge Modal with SVG QR Code */}
       {selectedBadgeMember && (
         <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
           <style>{`
@@ -1947,7 +1883,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
               <div>
                 <h3 className="font-sans font-extrabold text-slate-900 text-xl">{selectedBadgeMember.name}</h3>
                 <p className="font-mono text-xs text-slate-400 mt-0.5">{selectedBadgeMember.id}</p>
-                {/* Dynamic Loyalty Badge on QR card */}
                 <div className="mt-2 flex justify-center">
                   {selectedBadgeMember.totalCheckIns >= 20 ? (
                     <span className="text-[10px] inline-flex items-center gap-1 font-sans leading-none bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/25 px-2.5 py-1 rounded-full font-black shadow-3xs" title="Gold Member Badge: 20+ Check-ins">
@@ -1972,7 +1907,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
                 </div>
               </div>
 
-              {/* QR Vector Frame */}
               <div className="bg-slate-50 p-6 rounded-2xl inline-block max-w-[200px] border border-slate-100 flex items-center justify-center mx-auto shadow-inner">
                 <div 
                   dangerouslySetInnerHTML={{ __html: generateQrSvg(selectedBadgeMember.id, 160) }}
@@ -2017,7 +1951,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
 
             </div>
 
-            {/* Hidden printable membership card container */}
             <div id="apex-printable-card-area" className="hidden">
               <div className="print-card-wrapper">
                 <div className="print-badge-header">
@@ -2065,12 +1998,10 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
         </div>
       )}
 
-      {/* RECEIVE ADVANCE PAYMENT MODAL */}
       {showAdvanceModal && (
         <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto animate-fade-in" id="advance-payment-modal">
           <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-xl p-6 shadow-2xl relative my-8 animate-scale-up">
             
-            {/* Header */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-purple-100 border border-purple-200 flex items-center justify-center text-purple-700 shrink-0">
@@ -2089,10 +2020,8 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
               </button>
             </div>
 
-            {/* Form */}
             <form onSubmit={handleProcessAdvancePayment} className="space-y-4 pt-4">
               
-              {/* Member Selector */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                   Select Member <span className="text-rose-500">*</span>
@@ -2119,7 +2048,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
                 </select>
               </div>
 
-              {/* Selected Member Detail Summary Card */}
               {(() => {
                 const sel = members.find(m => m.id === advanceMemberId);
                 if (!sel) return null;
@@ -2149,7 +2077,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
                 );
               })()}
 
-              {/* Amount & Presets */}
               <div>
                 <div className="flex justify-between items-center mb-1.5">
                   <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
@@ -2172,7 +2099,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
                   />
                 </div>
 
-                {/* Preset Chips */}
                 <div className="flex flex-wrap gap-1.5">
                   {[500, 1000, 2000, 3000, 5000].map(amt => (
                     <button
@@ -2203,7 +2129,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
                 </div>
               </div>
 
-              {/* Payment Mode & Purpose Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
@@ -2242,7 +2167,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
                 </div>
               </div>
 
-              {/* Immediate Membership Extension Option */}
               <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-2.5">
                 <label className="flex items-center gap-2 cursor-pointer select-none">
                   <input
@@ -2281,7 +2205,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
                       ))}
                     </div>
 
-                    {/* Extended Expiry Preview Calculation */}
                     {(() => {
                       const sel = members.find(m => m.id === advanceMemberId);
                       if (!sel) return null;
@@ -2308,7 +2231,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
                 )}
               </div>
 
-              {/* Reference & Notes Row */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
@@ -2337,7 +2259,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
                 </div>
               </div>
 
-              {/* Success Feedback Banner */}
               {advanceFeedback && (
                 <div className="bg-emerald-500 text-black p-4 rounded-2xl text-xs space-y-2 animate-fade-in shadow-md">
                   <div className="flex items-center gap-2 font-bold text-sm">
@@ -2370,7 +2291,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
                 </div>
               )}
 
-              {/* Actions Footer */}
               {!advanceFeedback && (
                 <div className="pt-4 border-t border-slate-100 flex justify-end gap-3">
                   <button
@@ -2396,11 +2316,9 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
         </div>
       )}
 
-      {/* PRINTABLE ADVANCE RECEIPT MODAL */}
       {showReceiptModal && activeReceipt && (
         <div className="fixed inset-0 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto animate-fade-in" id="advance-receipt-modal">
           
-          {/* Printable CSS style rules */}
           <style>{`
             @media print {
               body * {
@@ -2425,7 +2343,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
 
           <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-lg p-6 shadow-2xl relative animate-scale-up">
             
-            {/* Top Close */}
             <button
               onClick={() => setShowReceiptModal(false)}
               className="absolute right-5 top-5 text-slate-400 hover:text-slate-600 p-1 rounded-xl hover:bg-slate-100 transition-colors"
@@ -2433,10 +2350,8 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
               <X className="w-5 h-5" />
             </button>
 
-            {/* Printable Container */}
             <div id="printable-advance-receipt" className="space-y-4 pt-1">
               
-              {/* Gym Header */}
               <div className="text-center pb-3 border-b-2 border-slate-900">
                 <h2 className="font-extrabold text-2xl tracking-tight text-slate-900 uppercase font-sans">Apex Fitness Gym</h2>
                 <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider">Official Advance Payment Receipt</p>
@@ -2445,13 +2360,11 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
                 </div>
               </div>
 
-              {/* Date & Time */}
               <div className="flex justify-between items-center text-xs text-slate-500 font-mono border-b border-slate-100 pb-2">
                 <span>Date: <strong>{new Date(activeReceipt.date).toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' })}</strong></span>
                 <span>Time: <strong>{new Date(activeReceipt.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</strong></span>
               </div>
 
-              {/* Member Box */}
               <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-1 text-xs">
                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Member Details</p>
                 <div className="flex justify-between items-center">
@@ -2462,7 +2375,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
                 <p className="text-slate-600">Current Subscription: <strong>{activeReceipt.memberPlan}</strong></p>
               </div>
 
-              {/* Payment Details Table */}
               <div className="border border-slate-200 rounded-2xl overflow-hidden text-xs">
                 <table className="w-full text-left">
                   <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200">
@@ -2516,7 +2428,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
                 </div>
               )}
 
-              {/* Signature / Authorization Footer */}
               <div className="pt-6 border-t border-slate-200 flex justify-between items-end text-[10px] text-slate-400 font-sans">
                 <div>
                   <p className="font-bold text-slate-700">Apex Fitness Front Office</p>
@@ -2530,7 +2441,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
 
             </div>
 
-            {/* Non-printable action buttons */}
             <div className="pt-5 border-t border-slate-100 flex gap-2">
               <button
                 onClick={() => window.print()}
@@ -2565,12 +2475,10 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
         </div>
       )}
 
-      {/* ADVANCE PAYMENTS HISTORY MODAL */}
       {showAdvanceHistoryModal && (
         <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto animate-fade-in" id="advance-history-modal">
           <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-4xl p-6 shadow-2xl relative my-8 animate-scale-up">
             
-            {/* Modal Header */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-purple-100 border border-purple-200 flex items-center justify-center text-purple-700 shrink-0">
@@ -2589,9 +2497,7 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
               </button>
             </div>
 
-            {/* Content List */}
             {(() => {
-              // Gather all advance payment records across members
               const allAdvanceRecords: { member: Member; record: AdvancePaymentRecord }[] = [];
               members.forEach(m => {
                 if (m.advancePayments && m.advancePayments.length > 0) {
@@ -2601,7 +2507,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
                 }
               });
 
-              // Sort by date descending
               allAdvanceRecords.sort((a, b) => new Date(b.record.date).getTime() - new Date(a.record.date).getTime());
 
               const totalCollected = allAdvanceRecords.reduce((sum, item) => sum + item.record.amount, 0);
@@ -2609,7 +2514,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
               return (
                 <div className="space-y-4 pt-4">
                   
-                  {/* Summary Bar */}
                   <div className="bg-gradient-to-r from-purple-900 to-indigo-900 text-white rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-md">
                     <div>
                       <span className="text-[10px] text-purple-300 font-bold uppercase tracking-wider block">Total Advance Collected</span>
@@ -2627,7 +2531,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
                     </div>
                   </div>
 
-                  {/* History Table */}
                   {allAdvanceRecords.length === 0 ? (
                     <div className="text-center py-12 bg-slate-50 border border-dashed border-slate-200 rounded-2xl">
                       <Wallet className="w-10 h-10 text-slate-300 mx-auto mb-2 opacity-50" />
@@ -2708,7 +2611,6 @@ export function MembersList({ members, onAddMember, onUpdateMember, onDeleteMemb
                     </div>
                   )}
 
-                  {/* Close button */}
                   <div className="pt-3 border-t border-slate-100 text-right">
                     <button
                       onClick={() => setShowAdvanceHistoryModal(false)}

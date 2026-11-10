@@ -33,17 +33,14 @@ export function FeedbackManager({
 }: FeedbackManagerProps) {
   const [password, setPassword] = useState('');
   const [isUnlocked, setIsUnlocked] = useState(() => {
-    // Auto-unlock if current logged-in user is explicitly the Owner
     return currentUser?.role === 'Owner';
   });
   const [passwordError, setPasswordError] = useState<string | null>(null);
 
-  // Filters & Search State
   const [statusFilter, setStatusFilter] = useState<'All' | 'Pending' | 'Reviewed' | 'Addressed'>('All');
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Password submission handler
   const handleVerifyPassword = (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordError(null);
@@ -57,12 +54,10 @@ export function FeedbackManager({
     }
   };
 
-  // Lock manager back
   const handleLock = () => {
     setIsUnlocked(false);
   };
 
-  // Filter & Search feedbacks
   const filteredFeedbacks = useMemo(() => {
     return feedbacks.filter(fb => {
       const matchesStatus = statusFilter === 'All' || fb.status === statusFilter;
@@ -79,7 +74,6 @@ export function FeedbackManager({
     }).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }, [feedbacks, statusFilter, categoryFilter, searchQuery]);
 
-  // Metrics
   const stats = useMemo(() => {
     const total = feedbacks.length;
     const pending = feedbacks.filter(f => f.status === 'Pending').length;
@@ -92,7 +86,6 @@ export function FeedbackManager({
     return { total, pending, reviewed, addressed, avgRating };
   }, [feedbacks]);
 
-  // If locked, render the password gateway screen
   if (!isUnlocked) {
     return (
       <div className="max-w-md mx-auto my-12" id="feedback-lock-screen">
@@ -161,7 +154,6 @@ export function FeedbackManager({
   return (
     <div className="space-y-6" id="feedback-manager-workspace">
       
-      {/* Header Row */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-6 shadow-xs">
         <div className="flex items-center gap-4 text-left">
           <div className="p-3.5 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-2xl">
@@ -210,7 +202,6 @@ export function FeedbackManager({
         </div>
       </div>
 
-      {/* Metrics Grid */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div className="p-4 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 text-left">
           <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Total Submissions</span>
@@ -262,9 +253,7 @@ export function FeedbackManager({
         </div>
       </div>
 
-      {/* Filter and Control Bar */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-5 shadow-xs flex flex-col md:flex-row gap-4 items-stretch md:items-center">
-        {/* Search */}
         <div className="relative flex-1">
           <Search className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-400" />
           <input
@@ -276,7 +265,6 @@ export function FeedbackManager({
           />
         </div>
 
-        {/* Status Dropdown */}
         <div className="flex flex-wrap gap-2.5 items-center">
           <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-950 p-1.5 border border-slate-200/80 dark:border-slate-800 rounded-xl">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2">Status:</span>
@@ -296,7 +284,6 @@ export function FeedbackManager({
             ))}
           </div>
 
-          {/* Category Selector */}
           <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-950 px-2.5 py-1.5 border border-slate-200/80 dark:border-slate-800 rounded-xl text-xs font-bold">
             <Filter className="w-3.5 h-3.5 text-slate-400 mr-1" />
             <span className="text-slate-400">Category:</span>
@@ -317,7 +304,6 @@ export function FeedbackManager({
         </div>
       </div>
 
-      {/* Feedbacks Grid */}
       {filteredFeedbacks.length === 0 ? (
         <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-12 text-center">
           <MessageSquare className="w-12 h-12 text-slate-300 mx-auto animate-pulse mb-3" />
@@ -339,7 +325,6 @@ export function FeedbackManager({
                     : 'border-slate-200 dark:border-slate-800'
               }`}
             >
-              {/* Top Banner Row */}
               <div className="space-y-3 text-left">
                 <div className="flex justify-between items-start gap-4">
                   <div className="flex flex-wrap items-center gap-2">
@@ -380,7 +365,6 @@ export function FeedbackManager({
                 </div>
               </div>
 
-              {/* Bottom Info and Actions Row */}
               <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 pt-3 border-t border-slate-100 dark:border-slate-850">
                 <div className="text-left">
                   <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Submitted By</span>
@@ -398,9 +382,7 @@ export function FeedbackManager({
                   )}
                 </div>
 
-                {/* Actions & Status Dropdown combo */}
                 <div className="flex items-center gap-2.5 justify-end">
-                  {/* Complete/Address quick button */}
                   {fb.status !== 'Addressed' ? (
                     <button
                       type="button"
@@ -427,7 +409,6 @@ export function FeedbackManager({
                     </button>
                   )}
 
-                  {/* Dropdown status details */}
                   <select
                     value={fb.status}
                     onChange={async (e) => {
@@ -444,7 +425,6 @@ export function FeedbackManager({
                     <option value="Addressed">✅ Addressed</option>
                   </select>
 
-                  {/* Delete individual */}
                   <button
                     type="button"
                     onClick={async () => {

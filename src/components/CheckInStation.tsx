@@ -71,7 +71,6 @@ export function CheckInStation({ members, onCheckIn }: CheckInStationProps) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-in text-slate-800" id="checkin-gate-terminal">
       
-      {/* Title block */}
       <div className="lg:col-span-12 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-5">
         <div className="text-left">
           <h1 className="text-3xl font-sans font-bold tracking-tight text-slate-900 animate-fade-in">
@@ -92,7 +91,6 @@ export function CheckInStation({ members, onCheckIn }: CheckInStationProps) {
         </div>
       </div>
 
-      {/* LEFT COLUMN: Main Manual Entry Console */}
       <div className="lg:col-span-7 space-y-6">
         
         {scanResult && (
@@ -142,7 +140,6 @@ export function CheckInStation({ members, onCheckIn }: CheckInStationProps) {
           </div>
         )}
 
-        {/* Console Verification Panel */}
         <div className="bg-white border border-slate-200/85 rounded-2xl p-6 shadow-sm relative overflow-hidden" id="scanner-viewport-panel">
           
           <div className="flex justify-between items-center mb-4">
@@ -151,7 +148,6 @@ export function CheckInStation({ members, onCheckIn }: CheckInStationProps) {
               <h2 className="text-base font-sans font-bold text-slate-900">Front Desk Verification</h2>
             </div>
 
-            {/* Mute switcher */}
             <button
               onClick={() => setIsMuted(!isMuted)}
               className="p-1 px-2.5 text-xs font-semibold rounded-lg border border-slate-200 text-slate-500 hover:text-slate-900 flex items-center gap-1.5 hover:bg-slate-50 transition-colors cursor-pointer"
@@ -161,10 +157,8 @@ export function CheckInStation({ members, onCheckIn }: CheckInStationProps) {
             </button>
           </div>
 
-          {/* Interactive Screen Display */}
           <div className="aspect-video bg-slate-950 rounded-2xl relative overflow-hidden group border-2 border-slate-900 flex flex-col justify-center items-center">
             
-            {/* Receptionist System Graphics */}
             <div className="text-center p-8 space-y-4 select-none">
               <div className="relative inline-block">
                 <div className="w-16 h-16 rounded-2xl border-4 border-indigo-505/20 flex items-center justify-center mx-auto bg-slate-900">
@@ -181,7 +175,6 @@ export function CheckInStation({ members, onCheckIn }: CheckInStationProps) {
               </div>
             </div>
 
-            {/* Sim Check-in Badge overlay trigger */}
             <div className="absolute bottom-4 right-4 z-15">
               <button
                 type="button"
@@ -194,7 +187,6 @@ export function CheckInStation({ members, onCheckIn }: CheckInStationProps) {
               </button>
             </div>
 
-            {/* Animated Scanning Result Overlay Panel */}
             <AnimatePresence>
               {activeAnimation && (
                 <motion.div
@@ -216,7 +208,6 @@ export function CheckInStation({ members, onCheckIn }: CheckInStationProps) {
                     className="relative flex items-center justify-center flex-col space-y-4"
                   >
                     <div className="relative">
-                      {/* Ripple waves */}
                       <motion.div
                         animate={{ scale: [1, 1.8], opacity: [0.6, 0] }}
                         transition={{ repeat: Infinity, duration: 1.5, ease: 'easeOut' }}
@@ -225,7 +216,6 @@ export function CheckInStation({ members, onCheckIn }: CheckInStationProps) {
                         }`}
                       />
 
-                      {/* Main Center Badge */}
                       <div className={`w-16 h-16 rounded-full flex items-center justify-center relative z-10 border-4 shadow-xl ${
                         activeAnimation === 'success' 
                           ? 'bg-emerald-500 border-white text-white' 
@@ -274,7 +264,6 @@ export function CheckInStation({ members, onCheckIn }: CheckInStationProps) {
 
           </div>
 
-          {/* Quick Desk entry manual input */}
           <form onSubmit={handleManualSubmit} className="mt-6 flex gap-3 h-11" id="manual-gate-input-form">
             <div className="relative flex-1">
               <Search className="absolute left-4 top-3.5 w-4 h-4 text-slate-400" />
@@ -299,10 +288,8 @@ export function CheckInStation({ members, onCheckIn }: CheckInStationProps) {
 
       </div>
 
-      {/* RIGHT COLUMN: Interactive QR Code and Member List Clicker */}
       <div className="lg:col-span-5 space-y-6">
         
-        {/* Gym Porter QR Code Section */}
         <div className="bg-white border border-slate-200/85 rounded-2xl p-6 shadow-sm text-center space-y-4" id="gym-entrance-qr-panel">
           <div className="space-y-1">
             <h2 className="text-base font-sans font-bold text-slate-900">Entrance QR Directory</h2>
@@ -334,7 +321,6 @@ export function CheckInStation({ members, onCheckIn }: CheckInStationProps) {
           </div>
         </div>
 
-        {/* Member Directory Fast Sim Check-In clicker */}
         <div className="bg-white border border-slate-200/85 rounded-2xl p-6 shadow-sm" id="fast-checkin-selector">
           <h2 className="text-base font-sans font-bold text-slate-900 mb-1">Desk Directory Check-In</h2>
           <p className="text-xs text-slate-500 mb-3">Filter member database to instantly check-in with one click</p>

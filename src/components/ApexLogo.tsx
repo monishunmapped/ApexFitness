@@ -21,20 +21,15 @@ export function ApexLogo({ size = 120, className = '' }: ApexLogoProps) {
         xmlns="http://www.w3.org/2000/svg"
         className="drop-shadow-[0_4px_10px_rgba(14,165,233,0.3)] animate-scale-up"
       >
-        {/* Deep Black Inner Circle */}
         <circle cx="100" cy="100" r="96" fill="#000000" />
 
-        {/* Thick Electric Blue Ring */}
         <circle cx="100" cy="100" r="82" stroke="#0EA5E9" strokeWidth="11" />
         
-        {/* Double white/light thin container borders */}
         <circle cx="100" cy="100" r="88" stroke="#FFFFFF" strokeWidth="1.5" />
         <circle cx="100" cy="100" r="76" stroke="#FFFFFF" strokeWidth="1.5" />
 
-        {/* 12 Gold Stars placed symmetrically around the blue ring */}
         {stars.map((star) => (
           <g key={star.key} transform={`translate(${star.cx}, ${star.cy})`}>
-            {/* 5-pointed Gold Star */}
             <polygon
               points="0,-4 1.2,-1.2 4.2,-1.2 1.8,0.6 2.7,3.6 0,1.8 -2.7,3.6 -1.8,0.6 -4.2,-1.2 -1.2,-1.2"
               fill="#EAB308"
@@ -44,9 +39,7 @@ export function ApexLogo({ size = 120, className = '' }: ApexLogoProps) {
           </g>
         ))}
 
-        {/* Stylized Modern Apex "A" Arrowhead Logo */}
         <g transform="translate(100, 72) scale(1.15)">
-          {/* Futuristic chevron splits into two sleek wings */}
           <path
             d="M 0 -22 L 20 18 L 10 18 L 0 -4 L -10 18 L -20 18 Z"
             fill="#0EA5E9"
@@ -58,7 +51,6 @@ export function ApexLogo({ size = 120, className = '' }: ApexLogoProps) {
           />
         </g>
 
-        {/* A-PEX Text */}
         <text
           x="100"
           y="126"
@@ -72,7 +64,6 @@ export function ApexLogo({ size = 120, className = '' }: ApexLogoProps) {
           A-PEX
         </text>
 
-        {/* FITNESS CENTER Text */}
         <text
           x="100"
           y="150"

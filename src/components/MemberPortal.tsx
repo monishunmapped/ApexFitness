@@ -163,7 +163,6 @@ export function MemberPortal({ members, onCheckIn, onSubmitFeedback }: MemberPor
   return (
     <div className="max-w-md mx-auto bg-slate-50 border border-slate-200/60 rounded-3xl overflow-hidden shadow-md font-sans text-slate-800 relative" id="standalone-member-portal">
       
-      {/* Header */}
       <div className="bg-slate-900 text-white p-5 relative select-none">
         <div className="absolute inset-0 bg-radial-gradient from-sky-500/15 to-transparent opacity-40 pointer-events-none"></div>
         <div className="relative flex justify-between items-center text-left">
@@ -206,10 +205,8 @@ export function MemberPortal({ members, onCheckIn, onSubmitFeedback }: MemberPor
         </div>
       </div>
 
-      {/* Main Container */}
       <div className="p-5 space-y-5">
 
-        {/* Live Clock */}
         <div className="bg-white border border-slate-200/80 rounded-2xl p-3.5 shadow-xs flex items-center justify-between">
           <div className="flex items-center gap-1.5 text-slate-550">
             <Clock className="w-4 h-4 text-indigo-500 shrink-0" />
@@ -223,7 +220,6 @@ export function MemberPortal({ members, onCheckIn, onSubmitFeedback }: MemberPor
         {!checkInResult ? (
           <div className="space-y-5">
             
-            {/* Tab Switches */}
             <div className="grid grid-cols-2 gap-2 p-1 bg-slate-150 rounded-2xl">
               <button
                 type="button"
@@ -263,7 +259,6 @@ export function MemberPortal({ members, onCheckIn, onSubmitFeedback }: MemberPor
               </button>
             </div>
 
-            {/* On-Screen Touch Keyboard Panel */}
             {showVirtualKeyboard && (
               <div className="bg-slate-900 text-white p-3 rounded-2xl shadow-lg border border-slate-800 space-y-2 select-none animate-fadeIn text-center">
                 <div className="flex justify-between items-center px-1">
@@ -279,7 +274,6 @@ export function MemberPortal({ members, onCheckIn, onSubmitFeedback }: MemberPor
                   </button>
                 </div>
 
-                {/* Row 1: Numbers */}
                 <div className="flex justify-center gap-1">
                   {['1','2','3','4','5','6','7','8','9','0'].map(num => (
                     <button
@@ -293,7 +287,6 @@ export function MemberPortal({ members, onCheckIn, onSubmitFeedback }: MemberPor
                   ))}
                 </div>
 
-                {/* Row 2: Letters Q-P */}
                 <div className="flex justify-center gap-1">
                   {['Q','W','E','R','T','Y','U','I','O','P'].map(char => (
                     <button
@@ -307,7 +300,6 @@ export function MemberPortal({ members, onCheckIn, onSubmitFeedback }: MemberPor
                   ))}
                 </div>
 
-                {/* Row 3: Letters A-L */}
                 <div className="flex justify-center gap-1 px-2">
                   {['A','S','D','F','G','H','J','K','L'].map(char => (
                     <button
@@ -321,7 +313,6 @@ export function MemberPortal({ members, onCheckIn, onSubmitFeedback }: MemberPor
                   ))}
                 </div>
 
-                {/* Row 4: Caps, Z-M, Backspace */}
                 <div className="flex justify-center gap-1">
                   <button
                     type="button"
@@ -351,7 +342,6 @@ export function MemberPortal({ members, onCheckIn, onSubmitFeedback }: MemberPor
                   </button>
                 </div>
 
-                {/* Row 5: Space & Clear */}
                 <div className="flex justify-center gap-1 pt-0.5">
                   <button
                     type="button"
@@ -371,7 +361,6 @@ export function MemberPortal({ members, onCheckIn, onSubmitFeedback }: MemberPor
               </div>
             )}
 
-            {/* TAB 1: NAME SEARCH */}
             {authMode === 'search' && (
               <div className="space-y-4">
                 <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs space-y-3">
@@ -401,7 +390,6 @@ export function MemberPortal({ members, onCheckIn, onSubmitFeedback }: MemberPor
                     )}
                   </div>
 
-                  {/* Search Results */}
                   {searchResults.length > 0 && (
                     <div className="space-y-2 pt-2 border-t border-slate-100">
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider text-left">
@@ -443,7 +431,6 @@ export function MemberPortal({ members, onCheckIn, onSubmitFeedback }: MemberPor
                   )}
                 </div>
 
-                {/* Quick Tap Member Suggestions */}
                 <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs space-y-2 text-left">
                   <div className="flex justify-between items-center">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
@@ -473,7 +460,6 @@ export function MemberPortal({ members, onCheckIn, onSubmitFeedback }: MemberPor
               </div>
             )}
 
-            {/* TAB 2: BIRTHDATE PIN KEYPAD */}
             {authMode === 'pin' && (
               <div className="space-y-4">
                 <div className="text-center space-y-1">
@@ -485,7 +471,6 @@ export function MemberPortal({ members, onCheckIn, onSubmitFeedback }: MemberPor
                   </p>
                 </div>
 
-                {/* PIN Display Boxes */}
                 <div className="flex justify-center gap-2 py-2">
                   {Array.from({ length: Math.max(4, dobPin.length) }, (_, index) => {
                     const digit = dobPin[index];
@@ -504,7 +489,6 @@ export function MemberPortal({ members, onCheckIn, onSubmitFeedback }: MemberPor
                   })}
                 </div>
 
-                {/* Onscreen Numpad */}
                 <div className="grid grid-cols-3 gap-2">
                   {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((num) => (
                     <button
@@ -557,7 +541,6 @@ export function MemberPortal({ members, onCheckIn, onSubmitFeedback }: MemberPor
               </div>
             )}
 
-            {/* TAB 3: BIOMETRICS SCAN */}
             {authMode === 'biometrics' && (
               <div className="space-y-4 text-left">
                 <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs space-y-3">
@@ -617,7 +600,6 @@ export function MemberPortal({ members, onCheckIn, onSubmitFeedback }: MemberPor
                         </button>
                       </div>
 
-                      {/* Scanner Touchpad */}
                       <div className="flex flex-col items-center justify-center gap-3 py-4">
                         <button
                           type="button"
@@ -652,7 +634,6 @@ export function MemberPortal({ members, onCheckIn, onSubmitFeedback }: MemberPor
               </div>
             )}
 
-            {/* TAB 4: GYM FEEDBACK */}
             {authMode === 'feedback' && (
               <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
                 <FeedbackForm members={members} onSubmitFeedback={onSubmitFeedback} />

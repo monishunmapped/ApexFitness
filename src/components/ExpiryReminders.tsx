@@ -1,8 +1,3 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import { useState, useMemo } from 'react';
 import { Member, WelcomeMessage } from '../types';
 import { calculateDaysRemaining, formatDateDDMMYYYY, todayISO } from '../utils/dateUtils';
@@ -39,18 +34,14 @@ export function ExpiryReminders({
   onDeleteMessage, 
   onUpdateMessageStatus 
 }: ExpiryRemindersProps) {
-  // Constant anchor today's date
   const TODAY_STR = todayISO();
 
-  // Active tab selection: 'renewals' vs 'welcome-alerts'
   const [activeTab, setActiveTab] = useState<'renewals' | 'welcome-alerts'>('renewals');
 
-  // Renewal Template draft state
   const [template, setTemplate] = useState<string>(
     "Hello {NAME}! 🏋️‍♂️ This is a friendly reminder from Apex Fitness. Your {PLAN} membership will end on {DATE} (in {DAYS} days). Renew today to keep your card swipe and lock-box active! Reply here or visit the desk. See you soon!"
   );
 
-  // Welcome alerts templates (stored in localStorage with instant fallback)
   const [welcomeTemplate, setWelcomeTemplate] = useState<string>(() => {
     return localStorage.getItem('ironpulse_template_welcome') || 
       "Welcome to Apex Fitness, {NAME}! 🚀 Your account is active under the {PLAN} subscription. We are thrilled to help you achieve your goals!";
@@ -61,22 +52,17 @@ export function ExpiryReminders({
       "Hello {NAME}! 💪 Checked in via {METHOD} for your {PLAN} training session. Let's make today count!";
   });
 
-  // Default option for phone numbers without country code.
   const [defaultCountryCode, setDefaultCountryCode] = useState<'91' | '1'>('91');
 
-  // Filter & Search states (Renewals)
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'exact-5' | 'soon' | 'expired'>('all');
 
-  // Filter & Search states (Welcome / Checkin Alerts)
   const [welcomeSearchQuery, setWelcomeSearchQuery] = useState('');
   const [welcomeFilterType, setWelcomeFilterType] = useState<'all' | 'Welcome' | 'CheckIn'>('all');
   const [welcomeStatusFilter, setWelcomeStatusFilter] = useState<'all' | 'Pending' | 'Sent'>('all');
 
-  // Days remaining helper calculation
   const calculateDaysLeft = (expiryDateStr: string) => calculateDaysRemaining(expiryDateStr);
 
-  // Compile individual member's text
   const compileMessage = (member: Member, daysLeft: number) => {
     let msg = template;
     msg = msg.replace(/{NAME}/g, member.name);
@@ -86,13 +72,11 @@ export function ExpiryReminders({
     return msg;
   };
 
-  // Save customized welcome template
   const handleSaveWelcomeTemplate = (text: string) => {
     setWelcomeTemplate(text);
     localStorage.setItem('ironpulse_template_welcome', text);
   };
 
-  // Save customized entry template
   const handleSaveEntryTemplate = (text: string) => {
     setEntryTemplate(text);
     localStorage.setItem('ironpulse_template_entry', text);
@@ -100,7 +84,6 @@ export function ExpiryReminders({
 
   const generateWhatsappUrl = (phone: string, text: string) => whatsappUrl(phone, text, defaultCountryCode);
 
-  // Prepare expiring list data objects
   const expirationsData = useMemo(() => {
     return members.map(m => {
       const daysLeft = calculateDaysLeft(m.expiryDate);
@@ -118,7 +101,6 @@ export function ExpiryReminders({
     });
   }, [members]);
 
-  // Statistics for Renewals
   const stats = useMemo(() => {
     const exact5Count = expirationsData.filter(d => d.daysLeft === 5 && d.member.status === 'Active').length;
     const totalSoonCount = expirationsData.filter(d => d.daysLeft > 0 && d.daysLeft <= 7).length;
@@ -131,7 +113,6 @@ export function ExpiryReminders({
     };
   }, [expirationsData, members]);
 
-  // Statistics for welcome messages
   const welcomeStats = useMemo(() => {
     const totalPending = welcomeMessages.filter(m => m.status === 'Pending').length;
     const pendingWelcome = welcomeMessages.filter(m => m.type === 'Welcome' && m.status === 'Pending').length;
@@ -146,7 +127,6 @@ export function ExpiryReminders({
     };
   }, [welcomeMessages]);
 
-  // Apply filters and searches for EXPIRING renewals
   const filteredExpirations = useMemo(() => {
     return expirationsData.filter(item => {
       const matchesSearch = 
@@ -170,7 +150,6 @@ export function ExpiryReminders({
     });
   }, [expirationsData, searchQuery, filterType]);
 
-  // Apply filters and searches for WELCOME and entry messages
   const filteredWelcomeMessages = useMemo(() => {
     return welcomeMessages.filter(msg => {
       const matchesSearch = 
@@ -193,14 +172,12 @@ export function ExpiryReminders({
     });
   }, [welcomeMessages, welcomeSearchQuery, welcomeFilterType, welcomeStatusFilter]);
 
-  // Trigger click tracking for standard renewal reminder
   const handleLaunchReminder = (memberId: string, phone: string, text: string) => {
     const url = generateWhatsappUrl(phone, text);
     window.open(url, '_blank', 'noopener,noreferrer');
     onUpdateMember(memberId, { reminderSentDate: TODAY_STR });
   };
 
-  // Trigger click tracking and send action for Welcome/Check-in messages
   const handleSendWelcomeAlert = (msgId: string, phone: string, text: string) => {
     const url = generateWhatsappUrl(phone, text);
     window.open(url, '_blank', 'noopener,noreferrer');
@@ -210,7 +187,6 @@ export function ExpiryReminders({
   return (
     <div className="space-y-6" id="whatsapp-reminders-module">
       
-      {/* Dynamic Tab Switcher */}
       <div className="flex bg-slate-100 p-1.5 rounded-2xl w-fit border border-slate-200" id="reminders-hub-tabs">
         <button
           onClick={() => setActiveTab('renewals')}
@@ -244,7 +220,6 @@ export function ExpiryReminders({
 
       {activeTab === 'renewals' ? (
         <>
-          {/* Renewals Intro info panel */}
           <div className="bg-gradient-to-r from-slate-900 to-slate-850 text-white rounded-3xl p-6 relative overflow-hidden select-none shadow-md text-left">
             <div className="absolute inset-0 bg-radial-gradient from-sky-500/15 to-transparent opacity-40 pointer-events-none"></div>
             <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
@@ -264,7 +239,6 @@ export function ExpiryReminders({
             </div>
           </div>
 
-          {/* KPI stats section */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6" id="reminder-kpi-row">
             <div className="bg-sky-50/50 border border-sky-200 rounded-2xl p-4 flex items-center gap-4 text-left shadow-xs">
               <div className="p-3 bg-sky-500 text-black rounded-xl">
@@ -297,7 +271,6 @@ export function ExpiryReminders({
             </div>
           </div>
 
-          {/* Template Editor Drawer */}
           <div className="bg-white border border-slate-200/80 rounded-3xl p-5 shadow-xs text-left space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="font-sans font-bold text-sm text-slate-900 flex items-center gap-2">
@@ -339,13 +312,11 @@ export function ExpiryReminders({
             </div>
           </div>
 
-          {/* Expirations filtering & search directory list */}
           <div className="bg-white border border-slate-200/85 rounded-3xl p-5 shadow-sm space-y-4">
             
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-left">
               <h3 className="font-sans font-bold text-base text-slate-900">Member Reminders Queue</h3>
               
-              {/* Quick buttons filter */}
               <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
                 <button
                   onClick={() => setFilterType('all')}
@@ -384,7 +355,6 @@ export function ExpiryReminders({
               </div>
             </div>
 
-            {/* Sticky Search bar */}
             <div className="relative">
               <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none">
                 <Search className="h-4 w-4 text-slate-400" />
@@ -398,7 +368,6 @@ export function ExpiryReminders({
               />
             </div>
 
-            {/* List entries */}
             <div className="divide-y divide-slate-100 max-h-[500px] overflow-y-auto pr-1">
               {filteredExpirations.map(({ member, daysLeft, isExact5, isSoon, isExpired }) => {
                 const compiledText = compileMessage(member, daysLeft);
@@ -412,7 +381,6 @@ export function ExpiryReminders({
                         <span className="text-[10px] font-mono bg-slate-100 text-slate-500 px-2 py-0.5 rounded border border-slate-200/50">{member.id}</span>
                         <span className="text-[10px] font-mono bg-indigo-50 text-indigo-600 font-bold px-2 py-0.5 rounded border border-indigo-100">{member.plan} Plan</span>
                         
-                        {/* Badging alert tags */}
                         {isExact5 && (
                           <span className="text-[10px] bg-amber-500/10 text-amber-700 border border-amber-200 font-black px-2 py-0.5 rounded animate-pulse">
                             🚨 Alert Today (5 Days left)
@@ -440,7 +408,6 @@ export function ExpiryReminders({
                         <span>Expires: <span className="font-bold text-slate-600">{formatDateDDMMYYYY(member.expiryDate)}</span></span>
                       </div>
 
-                      {/* Collapsible live preformatted WhatsApp message block */}
                       <div className="mt-2.5 bg-slate-50 border border-slate-100 rounded-xl p-3 text-[11px] text-slate-600 font-sans tracking-wide leading-relaxed relative">
                         <span className="absolute -top-2 left-3 bg-white px-1.5 py-0.5 text-[9px] font-bold text-slate-400 uppercase tracking-widest border border-slate-100 rounded">
                           live message draft
@@ -449,7 +416,6 @@ export function ExpiryReminders({
                       </div>
                     </div>
 
-                    {/* Send Button Trigger */}
                     <div className="flex flex-row md:flex-col items-stretch gap-2 w-full md:w-auto self-stretch justify-end">
                       <button
                         onClick={() => handleLaunchReminder(member.id, member.phone, compiledText)}
@@ -490,7 +456,6 @@ export function ExpiryReminders({
         </>
       ) : (
         <>
-          {/* Welcome Messages Hub - Customizable Template Settings and Queue */}
           <div className="bg-gradient-to-r from-teal-900 to-slate-900 text-white rounded-3xl p-6 relative overflow-hidden select-none shadow-md text-left">
             <div className="absolute inset-0 bg-radial-gradient from-emerald-500/15 to-transparent opacity-40 pointer-events-none"></div>
             <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
@@ -510,7 +475,6 @@ export function ExpiryReminders({
             </div>
           </div>
 
-          {/* Quick Metrics Alerts */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4" id="welcome-kpi-row">
             <div className="bg-amber-50/40 border border-amber-200/70 rounded-2xl p-4 flex items-center gap-4 text-left shadow-xs">
               <div className="p-3 bg-amber-500 text-amber-950 rounded-xl relative">
@@ -554,10 +518,8 @@ export function ExpiryReminders({
             </div>
           </div>
 
-          {/* TWO Customizable Template Editors */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             
-            {/* New registration template */}
             <div className="bg-white border border-slate-200/80 rounded-3xl p-5 shadow-xs text-left space-y-4">
               <div className="flex justify-between items-center">
                 <h3 className="font-sans font-bold text-sm text-slate-950 flex items-center gap-2">
@@ -580,7 +542,6 @@ export function ExpiryReminders({
               </div>
             </div>
 
-            {/* Daily check-in greeting template */}
             <div className="bg-white border border-slate-200/80 rounded-3xl p-5 shadow-xs text-left space-y-4">
               <div className="flex justify-between items-center">
                 <h3 className="font-sans font-bold text-sm text-slate-950 flex items-center gap-2">
@@ -606,7 +567,6 @@ export function ExpiryReminders({
 
           </div>
 
-          {/* Welcome Message Log Card List */}
           <div className="bg-white border border-slate-200/85 rounded-3xl p-5 shadow-sm space-y-4">
             
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 text-left">
@@ -615,10 +575,8 @@ export function ExpiryReminders({
                 <p className="text-[11px] text-slate-400">Newly registered members and recent daily check-ins appear here in real time on all devices.</p>
               </div>
 
-              {/* Filtering Controls Row */}
               <div className="flex flex-wrap items-center gap-2">
                 
-                {/* Type Filter */}
                 <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
                   <button
                     onClick={() => setWelcomeFilterType('all')}
@@ -646,7 +604,6 @@ export function ExpiryReminders({
                   </button>
                 </div>
 
-                {/* Status Filter */}
                 <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
                   <button
                     onClick={() => setWelcomeStatusFilter('all')}
@@ -677,7 +634,6 @@ export function ExpiryReminders({
               </div>
             </div>
 
-            {/* Messages Search Bar */}
             <div className="relative">
               <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none">
                 <Search className="h-4 w-4 text-slate-400" />
@@ -691,12 +647,10 @@ export function ExpiryReminders({
               />
             </div>
 
-            {/* List entries */}
             <div className="divide-y divide-slate-100 max-h-[500px] overflow-y-auto pr-1">
               {filteredWelcomeMessages.map((msg) => {
                 const isSent = msg.status === 'Sent';
                 
-                // Formatted timestamp
                 let readableTime = 'Just now';
                 try {
                   const dateObj = new Date(msg.timestamp);
@@ -710,7 +664,6 @@ export function ExpiryReminders({
                       
                       <div className="flex items-center flex-wrap gap-2">
                         
-                        {/* Type Tag */}
                         {msg.type === 'Welcome' ? (
                           <span className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-150 font-bold px-2 py-0.5 rounded flex items-center gap-1">
                             <Sparkles className="w-3 h-3 text-emerald-500" />
@@ -726,7 +679,6 @@ export function ExpiryReminders({
                         <span className="font-sans font-bold text-sm text-slate-900">{msg.memberName}</span>
                         <span className="text-[10px] font-mono bg-slate-100 text-slate-500 px-1.5 py-0.2 rounded">{msg.memberId}</span>
                         
-                        {/* Status Tag */}
                         {isSent ? (
                           <span className="text-[9px] bg-emerald-100 text-emerald-800 font-black px-2 py-0.5 rounded border border-emerald-250 flex items-center gap-1">
                             <Check className="w-3 h-3" />
@@ -741,14 +693,12 @@ export function ExpiryReminders({
                         <span className="text-[10px] text-slate-400 font-mono ml-auto">{readableTime}</span>
                       </div>
 
-                      {/* Display Info */}
                       <div className="flex items-center gap-4 text-xs text-slate-500 font-mono flex-wrap">
                         <span>Phone: <span className="font-sans font-bold text-slate-600">{msg.phone}</span></span>
                         {msg.plan && <span>Plan: <span className="font-sans font-bold text-slate-600">{msg.plan}</span></span>}
                         {msg.method && <span>Method: <span className="font-sans font-bold text-slate-600">{msg.method}</span></span>}
                       </div>
 
-                      {/* Display compiled message text */}
                       <div className="mt-2 bg-slate-50 border border-slate-100 rounded-xl p-3 text-[11px] text-slate-600 font-sans tracking-wide leading-relaxed relative">
                         <span className="absolute -top-2 left-3 bg-white px-1.5 py-0.5 text-[8px] font-bold text-slate-400 uppercase tracking-widest border border-slate-100 rounded">
                           Preformatted Message Template
@@ -758,10 +708,8 @@ export function ExpiryReminders({
 
                     </div>
 
-                    {/* Actions Row */}
                     <div className="flex flex-row md:flex-col items-stretch gap-2 w-full md:w-auto self-stretch justify-end">
                       
-                      {/* Send Button */}
                       <button
                         onClick={() => handleSendWelcomeAlert(msg.id, msg.phone, msg.messageText)}
                         className={`px-4 py-2 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 ${
@@ -774,7 +722,6 @@ export function ExpiryReminders({
                         <span>{isSent ? 'Resend WhatsApp' : 'Dispatch Greet'}</span>
                       </button>
 
-                      {/* Mark Status / Delete buttons */}
                       <div className="flex items-center justify-between gap-1 w-full md:w-auto">
                         {!isSent ? (
                           <button

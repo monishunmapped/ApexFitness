@@ -1,8 +1,3 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import React, { useState, useMemo } from 'react';
 import { Member, Feedback } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -100,7 +95,6 @@ export function FeedbackForm({ members, onSubmitFeedback }: FeedbackFormProps) {
             onSubmit={handleSubmit} 
             className="space-y-5 text-left"
           >
-            {/* Header Section */}
             <div className="flex items-start justify-between">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
@@ -120,7 +114,6 @@ export function FeedbackForm({ members, onSubmitFeedback }: FeedbackFormProps) {
               </div>
             </div>
 
-            {/* Step 1: Category Picker */}
             <div className="space-y-2">
               <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
                 1. What is this suggestion about?
@@ -143,7 +136,6 @@ export function FeedbackForm({ members, onSubmitFeedback }: FeedbackFormProps) {
               </div>
             </div>
 
-            {/* Step 2: Rating Selection */}
             <div className="space-y-2 bg-slate-50/75 dark:bg-slate-850/60 border border-slate-200/50 dark:border-slate-800 p-4 rounded-2xl">
               <div className="flex justify-between items-center">
                 <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
@@ -178,7 +170,6 @@ export function FeedbackForm({ members, onSubmitFeedback }: FeedbackFormProps) {
               </div>
             </div>
 
-            {/* Step 3: Suggestion Textarea */}
             <div className="space-y-2">
               <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
                 3. Your Thoughts & Detailed Suggestion
@@ -202,7 +193,6 @@ export function FeedbackForm({ members, onSubmitFeedback }: FeedbackFormProps) {
               </div>
             </div>
 
-            {/* Step 4: Identity Picker */}
             <div className="space-y-3 pt-1 border-t border-slate-100 dark:border-slate-800">
               <div className="flex items-center justify-between">
                 <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
@@ -313,7 +303,6 @@ export function FeedbackForm({ members, onSubmitFeedback }: FeedbackFormProps) {
               </div>
             )}
 
-            {/* Submission Button */}
             <button
               type="submit"
               disabled={isSubmitting || (!isAnonymous && !selectedMember)}

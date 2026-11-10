@@ -19,7 +19,6 @@ import {
   Upload
 } from 'lucide-react';
 
-// Indian Rupees Number to English Words converter for authentic printed receipt
 export function numberToWords(num: number): string {
   const a = [
     '', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
@@ -40,7 +39,6 @@ export function numberToWords(num: number): string {
   if (temp === 0) return 'Zero Rupees Only';
 
   let result = '';
-  // Support up to Lakhs
   const lakhs = Math.floor(temp / 100000);
   let remaining = temp % 100000;
 
@@ -100,7 +98,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
     return saved !== null ? saved === 'true' : true;
   });
 
-  // Auto-onboarding transition steps simulation on mount for new registrations
   useEffect(() => {
     if (isNewRegistration) {
       setDispatchStep(0);
@@ -119,7 +116,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
     }
   }, [isNewRegistration, member.id]);
 
-  // Handle instant automatic printing upon generation if configured
   useEffect(() => {
     if (isNewRegistration && autoPrint) {
       const timer = setTimeout(() => {
@@ -129,7 +125,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
     }
   }, [isNewRegistration, autoPrint, member.id]);
 
-  // Try to load any previously customized gym profile to remember owner preferences
   const [gymProfile, setGymProfile] = useState(() => {
     const saved = localStorage.getItem('ironpulse_invoice_profile');
     if (saved) {
@@ -143,7 +138,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
           };
         }
       } catch (e) {
-        // Fallback below
       }
     }
     return {
@@ -160,17 +154,14 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
     };
   });
 
-  // Save gym profile changes
   useEffect(() => {
     localStorage.setItem('ironpulse_invoice_profile', JSON.stringify(gymProfile));
   }, [gymProfile]);
 
-  // Unique invoice number generation based on date and member ID
   const defaultInvoiceNo = useMemo(() => {
     return `INV-${todayISO().replace(/-/g, '')}-${member.id}-${Math.floor(100 + Math.random() * 900)}`;
   }, [member]);
 
-  // Generate initial line items based on member's plan
   const initialLineItems = useMemo<InvoiceLineItem[]>(() => {
     const planObj = plans.find(p => p.name === member.plan);
     const price = planObj ? planObj.price : 49;
@@ -194,7 +185,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
     ];
   }, [member, plans]);
 
-  // Invoice form state
   const [invoiceNo, setInvoiceNo] = useState(defaultInvoiceNo);
   const [issueDate, setIssueDate] = useState(todayISO);
   const [dueDate, setDueDate] = useState(() => calculateExpiryDate(todayISO(), 3).expiryDateIso);
@@ -204,7 +194,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
   const [discount, setDiscount] = useState<number>(0);
   const [ownerNotes, setOwnerNotes] = useState(gymProfile.notes);
 
-  // Billing profile fields (owner customizable)
   const [profileGymName, setProfileGymName] = useState(gymProfile.gymName);
   const [profileAddress, setProfileAddress] = useState(gymProfile.gymAddress);
   const [profilePhone, setProfilePhone] = useState(gymProfile.gymPhone);
@@ -214,13 +203,11 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
   const [qrMode, setQrMode] = useState<'dynamic' | 'custom'>(gymProfile.qrMode || 'dynamic');
   const [customQrUrl, setCustomQrUrl] = useState<string>(gymProfile.customQrUrl || '');
 
-  // Interactive UI state
   const [activeTab, setActiveTab] = useState<'preview' | 'editor' | 'settings'>('preview');
   const [isSent, setIsSent] = useState(false);
   const [sendChannel, setSendChannel] = useState<'WhatsApp' | 'Email' | 'None'>('None');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
-  // Math totals calculation
   const totals = useMemo(() => {
     const subtotal = lineItems.reduce((acc, item) => acc + (item.qty * item.unitPrice), 0);
     const taxAmount = parseFloat(((subtotal * taxRate) / 100).toFixed(2));
@@ -228,7 +215,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
     return { subtotal, taxAmount, total };
   }, [lineItems, taxRate, discount]);
 
-  // Dynamic fields for A-PEX receipt pad mapping
   const planDurationDays = useMemo(() => {
     const planObj = plans.find(p => p.name === member.plan);
     return planObj ? planObj.durationDays : 30;
@@ -251,7 +237,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
   }, [issueDate, dueDate, planDurationDays]);
 
   const invoiceSerialNo = useMemo(() => {
-    // Generate an authentic red ticket-book serial number like "31" or "0031"
     const parsed = parseInt(member.id.replace(/[^0-9]/g, ''));
     if (!isNaN(parsed)) {
       return (parsed % 100 || 31).toString();
@@ -263,8 +248,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
     return numberToWords(totals.total);
   }, [totals.total]);
 
-  // Generate Payment Link for the QR Code
-  // A dynamic custom scan UPI payment string or standard URL
   const paymentLink = useMemo(() => {
     const cleanUpi = upiId.trim();
     if (!cleanUpi) return '';
@@ -272,36 +255,29 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
     const currencyCode = currency === '₹' ? 'INR' : currency === '€' ? 'EUR' : 'USD';
     const cleanNo = encodeURIComponent(invoiceNo);
 
-    // If the input is already a fully formed custom UPI URI string, handle/adjust it
     if (cleanUpi.startsWith('upi://')) {
       let baseUri = cleanUpi;
-      // Add amount if not already present
       if (!baseUri.includes('am=')) {
         baseUri += `&am=${amountStr}`;
       }
-      // Add currency if not already present
       if (!baseUri.includes('cu=')) {
         baseUri += `&cu=${currencyCode}`;
       }
-      // Add invoice note parameter
       if (!baseUri.includes('tn=')) {
         baseUri += `&tn=Invoice%20${cleanNo}`;
       }
       return baseUri;
     }
 
-    // Standard high-fidelity UPI payment gateway URI
     const cleanName = encodeURIComponent(upiName.trim() || 'Apex Fitness Studio');
     return `upi://pay?pa=${encodeURIComponent(cleanUpi)}&pn=${cleanName}&am=${amountStr}&cu=${currencyCode}&tn=Invoice%20${cleanNo}&mode=02`;
   }, [upiId, upiName, totals.total, currency, invoiceNo]);
 
-  // Generate SVG representation of the QR code path
   const paymentQrSvg = useMemo(
     () => (paymentLink ? generateQrSvg(paymentLink, 180) : '<p style="font-size:9px;text-align:center;padding:4px">Set your UPI ID in Settings</p>'),
     [paymentLink]
   );
 
-  // Save settings handler
   const handleSaveSettings = () => {
     setIsSavingProfile(true);
     const updated = {
@@ -323,7 +299,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
     }, 400);
   };
 
-  // Line item handlers
   const handleAddLineItem = () => {
     const newItem: InvoiceLineItem = {
       id: `li-item-${Date.now()}`,
@@ -352,7 +327,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
     setLineItems(updated);
   };
 
-  // Send Simulation handler
   const handleSendInvoice = (channel: 'WhatsApp' | 'Email') => {
     setIsSent(true);
     setSendChannel(channel);
@@ -417,7 +391,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
       `}</style>
       <div className="bg-slate-50 rounded-2xl w-full max-w-4xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden max-h-[90vh]" id="invoice-modal-card">
         
-        {/* Header */}
         <div className="bg-slate-900 text-white px-6 py-4 flex justify-between items-center shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-sky-500/10 text-sky-400 rounded-lg border border-sky-500/20">
@@ -437,7 +410,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
           </button>
         </div>
 
-        {/* Workspace Toolbar Tabs */}
         <div className="bg-white border-b border-slate-200 px-6 py-2 flex justify-between items-center flex-wrap gap-2 shrink-0">
           <div className="flex gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200">
             <button
@@ -505,10 +477,8 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
           </div>
         </div>
 
-        {/* Content Panel */}
         <div className="flex-1 overflow-y-auto p-6 bg-slate-100">
           
-          {/* Automated Onboarding Dispatch Monitor (For newly added database entries) */}
           {isNewRegistration && (
             <div className="mb-6 max-w-3xl mx-auto bg-slate-900 border border-indigo-500/40 shadow-xl rounded-2xl overflow-hidden p-5 flex flex-col gap-4 font-mono text-slate-100 select-none relative" id="dispatch-monitor">
               <div className="absolute top-4 right-4 flex items-center gap-1.5">
@@ -525,7 +495,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
               </div>
 
               <div className="space-y-3 text-[11px] leading-relaxed">
-                {/* Step 1 */}
                 <div className="flex items-start gap-2.5">
                   <span className="text-emerald-400 font-bold shrink-0">✓</span>
                   <p className="text-left">
@@ -533,7 +502,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
                   </p>
                 </div>
 
-                {/* Step 2 */}
                 <div className="flex items-start gap-2.5">
                   <span className="text-emerald-400 font-bold shrink-0">✓</span>
                   <p className="text-left">
@@ -541,7 +509,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
                   </p>
                 </div>
 
-                {/* Step 3 */}
                 <div className="flex items-start gap-2.5">
                   <span className="text-emerald-400 font-bold shrink-0">✓</span>
                   <p className="text-left">
@@ -549,7 +516,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
                   </p>
                 </div>
 
-                {/* Step 4 */}
                 <div className="flex items-start gap-2.5 transition-all duration-300">
                   {dispatchStep >= 3 ? (
                     <span className="text-emerald-400 font-bold shrink-0">✓</span>
@@ -565,7 +531,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
                   </p>
                 </div>
 
-                {/* Step 5 */}
                 <div className="flex items-start gap-2.5 transition-all duration-300">
                   {dispatchStep >= 5 ? (
                     <span className="text-emerald-400 font-bold shrink-0">✓</span>
@@ -582,7 +547,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
                 </div>
               </div>
 
-              {/* Progress counter */}
               <div className="border-t border-slate-800/80 pt-3 flex items-center justify-between text-[11px] text-slate-500">
                 <span>Verification State Checksums: <strong className="text-indigo-400">{Math.min(5, dispatchStep + 2)} / 5</strong></span>
                 {dispatchStep < 5 ? (
@@ -600,7 +564,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
             </div>
           )}
 
-          {/* Send feedback simulation toast banner */}
           {isSent && (
             <div className="mb-5 p-4 bg-emerald-50 border border-emerald-200 text-emerald-850 rounded-xl text-xs flex items-center gap-3 animate-bounce">
               <Check className="w-4 h-4 bg-emerald-500 text-white rounded-full p-0.5 shrink-0" />
@@ -611,10 +574,8 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
             </div>
           )}
 
-          {/* TAB 1: PREVIEW */}
           {activeTab === 'preview' && (
             <div className="max-w-3xl mx-auto space-y-5">
-              {/* Quick Print Action Banner */}
               <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4 print:hidden" id="quick-print-banner">
                 <div className="flex items-center gap-3">
                   <div className="p-2.5 bg-sky-50 text-sky-600 rounded-xl">
@@ -627,7 +588,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
                 </div>
                 
                 <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
-                  {/* Auto-Print Toggle */}
                   <label className="flex items-center gap-2 cursor-pointer select-none" id="toggle-auto-print-container">
                     <span className="text-[10px] sm:text-xs font-sans font-semibold text-slate-500 uppercase tracking-wide">Auto-Print</span>
                     <div className="relative">
@@ -657,12 +617,9 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
                 </div>
               </div>
 
-              {/* High-Fidelity Premium SaaS Gym Invoice (A4 portrait size) */}
               <div className="bg-white rounded-2xl border border-slate-200 p-6 font-sans text-left relative overflow-hidden select-none w-full max-w-[210mm] mx-auto shadow-xs" id="invoice-sheet">
                 
-                {/* Header Section */}
                 <div className="flex flex-row justify-between items-start border-b border-slate-100 pb-4 mb-4">
-                  {/* Left: Logo & Address */}
                   <div className="flex items-start gap-4">
                     <div className="shrink-0 p-1 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-center">
                       <ApexLogo size={64} />
@@ -679,7 +636,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
                     </div>
                   </div>
 
-                  {/* Right: Invoice Info */}
                   <div className="text-right">
                     <h2 className="font-bold text-[#0B2545] tracking-tight uppercase" style={{ fontSize: '22px' }}>
                       MEMBERSHIP INVOICE
@@ -692,9 +648,7 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
                   </div>
                 </div>
 
-                {/* 2-Column Details Grid (Member & Membership) */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  {/* Column 1: Member Details */}
                   <div className="border border-slate-200 rounded-xl overflow-hidden flex flex-col">
                     <div className="bg-slate-50 px-3 py-1.5 border-b border-slate-200">
                       <h3 className="font-bold text-slate-700 tracking-wide uppercase" style={{ fontSize: '15px' }}>
@@ -731,7 +685,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
                     </div>
                   </div>
 
-                  {/* Column 2: Membership Details */}
                   <div className="border border-slate-200 rounded-xl overflow-hidden flex flex-col">
                     <div className="bg-slate-50 px-3 py-1.5 border-b border-slate-200">
                       <h3 className="font-bold text-slate-700 tracking-wide uppercase" style={{ fontSize: '15px' }}>
@@ -766,7 +719,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
                   </div>
                 </div>
 
-                {/* Line Items Table */}
                 <div className="border border-slate-200 rounded-xl overflow-hidden mb-4">
                   <div className="bg-slate-50 px-3 py-1.5 border-b border-slate-200">
                     <h3 className="font-bold text-slate-700 tracking-wide uppercase" style={{ fontSize: '15px' }}>
@@ -795,10 +747,8 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
                   </table>
                 </div>
 
-                {/* Payment Calculations & Words Block */}
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start mb-4">
                   
-                  {/* Left Column: QR Scan Area */}
                   <div className="md:col-span-7 border border-slate-200 rounded-xl p-3 bg-slate-50/50 flex gap-4">
                     <div className="bg-white p-2 rounded-lg border border-slate-200 flex-shrink-0 flex items-center justify-center h-20 w-20 overflow-hidden select-none">
                       {qrMode === 'custom' && customQrUrl ? (
@@ -816,7 +766,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
                     </div>
                   </div>
 
-                  {/* Right Column: Detailed calculations */}
                   <div className="md:col-span-5 border border-slate-200 rounded-xl p-3 bg-slate-50/30 space-y-1.5 text-slate-600" style={{ fontSize: '11px' }}>
                     <div className="flex justify-between">
                       <span>Subtotal:</span>
@@ -843,7 +792,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
                   </div>
                 </div>
 
-                {/* Amount in Words */}
                 <div className="border border-slate-200 rounded-xl p-2.5 bg-slate-50/50 mb-4 text-slate-700" style={{ fontSize: '11px' }}>
                   <p className="leading-snug">
                     <span className="text-slate-400 uppercase font-extrabold text-[9px] block mb-0.5">Amount in Words</span>
@@ -851,7 +799,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
                   </p>
                 </div>
 
-                {/* Renewal & Due Banner */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 border border-slate-200 rounded-xl overflow-hidden mb-4 text-center divide-y sm:divide-y-0 sm:divide-x divide-slate-200" style={{ fontSize: '11px' }}>
                   <div className="p-2 bg-slate-50/30">
                     <span className="text-slate-400 block text-[9px] uppercase font-bold">Transaction ID</span>
@@ -869,7 +816,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
                   </div>
                 </div>
 
-                {/* Signature Block */}
                 <div className="grid grid-cols-2 gap-8 pt-4 pb-2 text-center" style={{ fontSize: '11px' }}>
                   <div className="flex flex-col items-center">
                     <div className="w-full max-w-[160px] h-8 border-b border-dashed border-slate-300"></div>
@@ -886,7 +832,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
                   </div>
                 </div>
 
-                {/* Footer Notes Section */}
                 <div className="border-t border-slate-100 pt-3 text-center text-slate-400" style={{ fontSize: '10px' }}>
                   <p className="italic">"{ownerNotes}"</p>
                   <p className="mt-2 text-[9px] font-mono tracking-wider uppercase text-slate-300">
@@ -896,7 +841,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
 
               </div>
 
-              {/* Dynamic Interactive Scanner Assistant Banner (Only visible in-app browser; hidden on paper prints) */}
               <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col sm:flex-row gap-4 items-center justify-between print:hidden shadow-xs" id="interactive-upi-drawer">
                 <div className="flex gap-4 items-center text-left">
                   <div className="bg-slate-50 p-2 rounded-xl border border-slate-200 flex-shrink-0 h-16 w-16 flex items-center justify-center overflow-hidden">
@@ -928,8 +872,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
             </div>
           )}
 
-
-          {/* TAB 2: EDITOR (ADD/REMOVE SECTIONS) */}
           {activeTab === 'editor' && (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 max-w-2xl mx-auto" id="invoice-items-editor">
               <h4 className="text-sm font-sans font-black text-slate-900 border-b pb-3 mb-4 text-left flex items-center gap-2">
@@ -941,17 +883,14 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
                 Edit items included in this enrollment cycle. You can add registration parameters, optional training packages, lockers, or credits below.
               </p>
 
-              {/* Line items list */}
               <div className="space-y-3 mb-6" id="line-items-editor-container">
                 {lineItems.map((item, idx) => (
                   <div key={item.id} className="flex gap-2 items-center bg-slate-50 p-3 rounded-xl border border-slate-200 animate-fade-in">
                     
-                    {/* Index flag */}
                     <div className="h-6 w-6 rounded-full bg-slate-200 text-[10px] font-mono font-bold flex items-center justify-center shrink-0">
                       {idx + 1}
                     </div>
 
-                    {/* Description field */}
                     <div className="flex-1 text-left min-w-0">
                       <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wide block">Section Name/Detail</label>
                       <input
@@ -963,7 +902,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
                       />
                     </div>
 
-                    {/* Qty field */}
                     <div className="w-16 text-left">
                       <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wide block">Qty</label>
                       <input
@@ -977,7 +915,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
                       />
                     </div>
 
-                    {/* Unit Price field */}
                     <div className="w-24 text-left">
                       <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wide block">Unit Fee ({currency})</label>
                       <div className="relative">
@@ -993,7 +930,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
                       </div>
                     </div>
 
-                    {/* Delete button */}
                     <button
                       type="button"
                       onClick={() => handleRemoveLineItem(item.id)}
@@ -1006,7 +942,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
                 ))}
               </div>
 
-              {/* Add item control and sub-options */}
               <div className="flex justify-between items-center bg-slate-50 p-4 rounded-xl border border-slate-200 border-dashed mb-6">
                 <button
                   type="button"
@@ -1041,7 +976,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
                 </div>
               </div>
 
-              {/* Top Meta info */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 border-t pt-5 text-left">
                 <div>
                   <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wide block">Invoice Identifier</label>
@@ -1089,8 +1023,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
             </div>
           )}
 
-
-          {/* TAB 3: SETTINGS (GYM PROFILE & UPI QR DETAILS) */}
           {activeTab === 'settings' && (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 max-w-xl mx-auto" id="invoice-owner-settings">
               <h4 className="text-sm font-sans font-black text-slate-900 border-b pb-3 mb-4 text-left flex items-center gap-2">
@@ -1099,7 +1031,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
               </h4>
 
               <div className="space-y-4 text-left">
-                {/* Gym Name Customizer */}
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Gym/Business Brand Name</label>
                   <input
@@ -1112,7 +1043,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
                   />
                 </div>
 
-                {/* Gym address */}
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Full business Address (Printed on invoices)</label>
                   <textarea
@@ -1125,7 +1055,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
                   />
                 </div>
 
-                {/* Sub contacts */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Business Phone</label>
@@ -1147,13 +1076,11 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
                   </div>
                 </div>
 
-                 {/* QR PAYMENT IDENTIFICATIONS (UPI OR CODE REGISTRY) */}
                 <div className="bg-sky-50/50 p-4 rounded-xl border border-sky-100 mt-2">
                   <span className="text-[10px] font-bold text-sky-700 uppercase tracking-widest block mb-2 font-mono">
                     Owner QR payment credentials Setup
                   </span>
 
-                  {/* Mode switcher */}
                   <div className="grid grid-cols-2 gap-2 mb-4">
                     <button
                       type="button"
@@ -1208,7 +1135,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
                     <div className="space-y-3 animate-fade-in text-left">
                       <label className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block">Upload Payment QR Image (PNG, JPG, SVG)</label>
                       <div className="flex flex-col sm:flex-row gap-4 items-center bg-white p-3 rounded-xl border border-slate-150">
-                        {/* QR Image preview box */}
                         <div className="relative w-24 h-24 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 overflow-hidden flex items-center justify-center shrink-0">
                           {customQrUrl ? (
                             <img src={customQrUrl} alt="Owner QR Code" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
@@ -1220,7 +1146,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
                           )}
                         </div>
 
-                        {/* Upload Controls */}
                         <div className="flex-1 space-y-2 text-center sm:text-left">
                           <label className="bg-slate-900 text-white hover:bg-slate-800 font-bold text-xs px-3 py-1.5 rounded-lg cursor-pointer shadow-3xs inline-flex items-center gap-1.5 transition-colors">
                             <Upload className="w-3.5 h-3.5 text-sky-400" />
@@ -1260,7 +1185,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
                   )}
                 </div>
 
-                {/* Default notes text */}
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Standard Invoice Bottom Message / disclaimer</label>
                   <input
@@ -1297,7 +1221,6 @@ export function InvoiceModal({ member, plans, currency, isNewRegistration = fals
 
         </div>
 
-        {/* Footer info controls */}
         <div className="bg-slate-900 border-t border-slate-850 px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs text-slate-400 shrink-0 select-none">
           <p className="text-left font-mono">
             Owner Wallet Address: <strong className="text-white hover:underline cursor-pointer">{upiId}</strong>

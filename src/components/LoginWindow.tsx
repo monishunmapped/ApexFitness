@@ -1,8 +1,3 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import React, { useState } from 'react';
 import { 
   Lock, 
@@ -45,7 +40,6 @@ export function LoginWindow({ onLoginSuccess, onBypassToPortal, securityConfig }
       
       <div className="max-w-md w-full space-y-6">
         
-        {/* Top Branding Header */}
         <div className="text-center space-y-3">
           <div className="mx-auto bg-slate-950 dark:bg-slate-900 duration-150 p-2.5 rounded-3xl shadow-xl border border-slate-200/40 dark:border-slate-800 w-16 h-16 flex items-center justify-center">
             <ApexLogo size={52} />
@@ -60,7 +54,6 @@ export function LoginWindow({ onLoginSuccess, onBypassToPortal, securityConfig }
           </div>
         </div>
 
-        {/* Credentials Form Box */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-md relative overflow-hidden transition-colors duration-150">
           
           <div className="absolute top-0 left-0 right-0 h-1 bg-indigo-500"></div>
@@ -71,7 +64,6 @@ export function LoginWindow({ onLoginSuccess, onBypassToPortal, securityConfig }
 
           <form onSubmit={handleLogin} className="space-y-4">
             
-            {/* Email Field */}
             <div className="space-y-1 text-left">
               <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
                 Security Identifier (Email)
@@ -92,7 +84,6 @@ export function LoginWindow({ onLoginSuccess, onBypassToPortal, securityConfig }
               </div>
             </div>
 
-            {/* Password Field */}
             <div className="space-y-1 text-left">
               <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
                 Security Password
@@ -121,7 +112,6 @@ export function LoginWindow({ onLoginSuccess, onBypassToPortal, securityConfig }
               </div>
             </div>
 
-            {/* Error Message */}
             {error && (
               <div 
                 className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 text-[11px] text-rose-600 dark:text-rose-400 font-medium text-left leading-relaxed flex gap-2.5 items-start mt-2 animate-shake"
@@ -143,7 +133,6 @@ export function LoginWindow({ onLoginSuccess, onBypassToPortal, securityConfig }
           </form>
         </div>
 
-        {/* Member Portal Bypass option (Realistic & Clever UX design) */}
         <div className="text-center pt-2 select-none">
           <button
             type="button"

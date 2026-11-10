@@ -1,17 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Member, CheckIn, MembershipPlan, WelcomeMessage, SecurityConfig, Feedback, CheckInMethod, CheckInResponse, UserSession } from './types';
 import { INITIAL_MEMBERS, INITIAL_CHECKINS, MEMBERSHIP_PLANS } from './data/initialData';
-import { Dashboard } from './components/Dashboard';
-import { MembersList } from './components/MembersList';
 import { ApexLogo } from './components/ApexLogo';
-import { CheckInStation } from './components/CheckInStation';
 import { MemberPortal } from './components/MemberPortal';
-import { ExpiryReminders } from './components/ExpiryReminders';
-import { InvoiceModal } from './components/InvoiceModal';
 import { LoginWindow } from './components/LoginWindow';
-import { AdminPanel } from './components/AdminPanel';
-import { FeedbackManager } from './components/FeedbackManager';
 import { LiveClock } from './components/LiveClock';
+
+const Dashboard = lazy(() => import('./components/Dashboard').then(m => ({ default: m.Dashboard })));
+const MembersList = lazy(() => import('./components/MembersList').then(m => ({ default: m.MembersList })));
+const CheckInStation = lazy(() => import('./components/CheckInStation').then(m => ({ default: m.CheckInStation })));
+const ExpiryReminders = lazy(() => import('./components/ExpiryReminders').then(m => ({ default: m.ExpiryReminders })));
+const InvoiceModal = lazy(() => import('./components/InvoiceModal').then(m => ({ default: m.InvoiceModal })));
+const AdminPanel = lazy(() => import('./components/AdminPanel').then(m => ({ default: m.AdminPanel })));
+const FeedbackManager = lazy(() => import('./components/FeedbackManager').then(m => ({ default: m.FeedbackManager })));
 import { calculateExpiryDate, calculateDaysRemaining, formatDateDDMMYYYY, formatDateISO, todayISO } from './utils/dateUtils';
 import { findMemberByCode, newId, whatsappUrl } from './utils/common';
 import {
@@ -506,7 +507,7 @@ export default function App() {
                   Live Syncing Active
                 </span>
               </div>
-              {renderView(currentView === 'portal' ? 'dashboard' : currentView)}
+              <Suspense>{renderView(currentView === 'portal' ? 'dashboard' : currentView)}</Suspense>
             </div>
 
             <div className="lg:col-span-4 sticky top-24">
@@ -534,7 +535,7 @@ export default function App() {
             )}
           </div>
         ) : (
-          <div className="space-y-6">{renderView(currentView)}</div>
+          <div className="space-y-6"><Suspense>{renderView(currentView)}</Suspense></div>
         )}
       </main>
 
@@ -561,6 +562,7 @@ export default function App() {
       </footer>
 
       {activeInvoiceMember && (
+        <Suspense>
         <InvoiceModal
           member={activeInvoiceMember}
           plans={plans}
@@ -571,6 +573,7 @@ export default function App() {
             setIsInvoiceNewRegistration(false);
           }}
         />
+        </Suspense>
       )}
     </div>
   );
